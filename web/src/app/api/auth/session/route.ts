@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { isAddress, type Hex } from "viem";
 import { CHAIN_ID, publicClient, sql } from "@insider/core";
 import { HttpError } from "@/server/auth";
@@ -24,7 +25,13 @@ export const POST = handle(async (req: Request) => {
   const ok = await publicClient().verifyMessage({ address: addr as `0x${string}`, message, signature });
   if (!ok) throw new HttpError(401, "Signature didn't match the wallet.");
 
-  const [u] = await sql()`insert into users (address) values (${addr}) on conflict (address) do update set address = excluded.address returning id`;
+  const [u] = await sql()`insert into users (address) values (${addr}) on conflict (address) do update set address = excluded.address returning id, (xmax = 0) as created`;
+  // A brand-new account that arrived through an invite link: credit the inviter.
+  const ref = (await cookies()).get("insider_ref")?.value;
+  if (u.created && ref && /^[a-z0-9]{6,12}$/.test(ref)) {
+    const [inv] = await sql()`update invites set uses = uses + 1 where code = ${ref} returning inviter_id`;
+    if (inv && String(inv.inviter_id) !== String(u.id)) await sql()`update users set invited_by = ${inv.inviter_id} where id = ${u.id}`;
+  }
   await setSessionCookie(String(u.id), addr);
   return NextResponse.json({ ok: true });
 });

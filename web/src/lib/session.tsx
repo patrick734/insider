@@ -38,7 +38,7 @@ export function DevSessionProvider({ children, initialMe }: { children: React.Re
   const [me, setMe] = useState<Me | null>(initialMe);
   const refresh = useCallback(async () => setMe(await fetchMe()), []);
   const login = useCallback(() => {
-    const handle = window.prompt("Development sign-in: which seeded handle?", "you");
+    const handle = window.prompt("Demo sign-in. Pick a sample account: you, mira, nova, juno, deltaq, kite", "you");
     if (!handle) return;
     void fetch("/api/auth/dev", { method: "POST", body: JSON.stringify({ handle }) }).then(() => window.location.reload());
   }, []);

@@ -102,7 +102,8 @@ export async function feed(viewerId: string | null, tab: FeedTab, before?: strin
     select po.*, ${U()},
            ro.slug as room_slug, ro.title as room_title, ro.is_live as room_live,
            exists(select 1 from post_likes l where l.post_id = po.id and l.user_id = ${v}) as liked,
-           exists(select 1 from reposts rp where rp.post_id = po.id and rp.user_id = ${v}) as reposted
+           exists(select 1 from reposts rp where rp.post_id = po.id and rp.user_id = ${v}) as reposted,
+           exists(select 1 from bookmarks bm where bm.post_id = po.id and bm.user_id = ${v}) as bookmarked
     from posts po
     join users u on u.id = po.user_id
     ${PNL_JOIN()}
@@ -118,7 +119,8 @@ export async function postsByUser(userId: string, viewerId: string | null, kind:
   const rows = await db()`
     select po.*, ${U()}, ro.slug as room_slug, ro.title as room_title, ro.is_live as room_live,
            exists(select 1 from post_likes l where l.post_id = po.id and l.user_id = ${v}) as liked,
-           exists(select 1 from reposts rp where rp.post_id = po.id and rp.user_id = ${v}) as reposted
+           exists(select 1 from reposts rp where rp.post_id = po.id and rp.user_id = ${v}) as reposted,
+           exists(select 1 from bookmarks bm where bm.post_id = po.id and bm.user_id = ${v}) as bookmarked
     from posts po join users u on u.id = po.user_id ${PNL_JOIN()} left join rooms ro on ro.id = po.room_id
     where po.user_id = ${userId} and po.deleted_at is null and po.reply_to_id is null
       ${kind === "calls" ? db()`and po.trade is not null` : db()``}
@@ -146,6 +148,8 @@ async function toPosts(rows: Record<string, unknown>[]): Promise<Post[]> {
     tipWei: String(r.tip_wei ?? 0),
     liked: Boolean(r.liked),
     reposted: Boolean(r.reposted),
+    bookmarked: Boolean(r.bookmarked),
+    media: ((r.media_ids as string[]) ?? []).map((id) => `/api/media/${id}`),
   }));
 }
 
@@ -421,9 +425,24 @@ export async function thread(postId: string, viewerId: string | null): Promise<P
   const rows = await db()`
     select po.*, ${U()}, ro.slug as room_slug, ro.title as room_title, ro.is_live as room_live,
            exists(select 1 from post_likes l where l.post_id = po.id and l.user_id = ${v}) as liked,
-           exists(select 1 from reposts rp where rp.post_id = po.id and rp.user_id = ${v}) as reposted
+           exists(select 1 from reposts rp where rp.post_id = po.id and rp.user_id = ${v}) as reposted,
+           exists(select 1 from bookmarks bm where bm.post_id = po.id and bm.user_id = ${v}) as bookmarked
     from posts po join users u on u.id = po.user_id ${PNL_JOIN()} left join rooms ro on ro.id = po.room_id
     where (po.id = ${postId} or po.reply_to_id = ${postId}) and po.deleted_at is null
     order by (po.id = ${postId}) desc, po.id asc limit 100`;
+  return toPosts(rows);
+}
+
+/** Posts the viewer bookmarked, newest bookmark first. */
+export async function bookmarked(userId: string): Promise<Post[]> {
+  const v = userId;
+  const rows = await db()`
+    select po.*, ${U()}, ro.slug as room_slug, ro.title as room_title, ro.is_live as room_live,
+           exists(select 1 from post_likes l where l.post_id = po.id and l.user_id = ${v}) as liked,
+           exists(select 1 from reposts rp where rp.post_id = po.id and rp.user_id = ${v}) as reposted,
+           true as bookmarked
+    from bookmarks b join posts po on po.id = b.post_id join users u on u.id = po.user_id ${PNL_JOIN()} left join rooms ro on ro.id = po.room_id
+    where b.user_id = ${v} and po.deleted_at is null
+    order by b.created_at desc limit 50`;
   return toPosts(rows);
 }

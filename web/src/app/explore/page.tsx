@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { Avatar, CoinTile } from "@/components/avatar";
 import { BaseChip, Corners, Empty, Main, PageHeader, Section, Tabs } from "@/components/page";
 import { Rail } from "@/components/rail";
+import { WatchButton } from "@/components/watch-button";
+import { Icon } from "@/components/icons";
+import { getMe } from "@/server/auth";
 import { coins, liveRooms, roomStats, topEarners, users } from "@/server/queries";
 import { compact, displayName, eth, profileHref } from "@/lib/format";
 import { sql } from "@insider/core";
@@ -27,6 +30,12 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
     <>
       <Main>
         <PageHeader title="Explore" right={<BaseChip />} tabs={TABS.map(([k, label]) => ({ label, href: k === "explore" ? "/explore" : `/explore?tab=${k}`, selected: k === tab }))} />
+        <form action="/explore" className="flex items-center gap-2.5 border-b border-line px-4 py-3 sm:px-5 xl:hidden">
+          <span className="text-muted">
+            <Icon name="search" size={16} />
+          </span>
+          <input name="q" defaultValue={sp.q ?? ""} placeholder="Search rooms, coins, people" aria-label="Search" className="mono min-w-0 flex-1 bg-transparent text-xs outline-none" />
+        </form>
         {sp.q ? <SearchResults q={sp.q} /> : null}
         {!sp.q && tab === "explore" && <ExploreTab />}
         {!sp.q && tab === "perps" && <ComingSoon what="Perps" line="Trade perpetuals from inside a room, with the host earning on the volume." />}
@@ -117,7 +126,14 @@ async function ExploreTab() {
 }
 
 async function TokensTab() {
-  const list = await coins();
+  const me = await getMe();
+  const [list, watched] = await Promise.all([
+    coins(),
+    me
+      ? sql()`select i.coin_address from watchlists w join watchlist_items i on i.watchlist_id = w.id where w.owner_id = ${me.id} and w.room_id is null`
+      : Promise.resolve([]),
+  ]);
+  const watching = new Set(watched.map((r) => r.coin_address as string));
   return (
     <>
       <div className="p-4 sm:p-5">
@@ -149,6 +165,7 @@ async function TokensTab() {
                   {c.name} · {compact(c.holders)} holders
                 </span>
               </span>
+              <WatchButton coin={c.address} watching={watching.has(c.address)} />
               {c.room ? (
                 <Link href={`/rooms/${c.room.slug}`} className="btn btn-off h-[30px] px-3 text-[10px]">
                   ROOM · {c.room.online}

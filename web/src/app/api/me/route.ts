@@ -24,7 +24,8 @@ export const PATCH = handle(async (req: Request) => {
         name = coalesce(${b.name?.trim() ?? null}, name),
         bio = coalesce(${b.bio?.trim() ?? null}, bio),
         x_handle = coalesce(${b.xHandle?.trim().replace(/^@/, "") ?? null}, x_handle),
-        pnl_visible = coalesce(${b.pnlVisible ?? null}, pnl_visible)
+        pnl_visible = coalesce(${b.pnlVisible ?? null}, pnl_visible),
+        onboarded_at = case when ${handle ?? null}::text is not null then coalesce(onboarded_at, now()) else onboarded_at end
       where id = ${me.id}`;
   } catch (e) {
     if ((e as { code?: string }).code === "23505") throw new HttpError(409, "That handle is taken.");

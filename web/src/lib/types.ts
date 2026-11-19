@@ -49,6 +49,9 @@ export type Post = {
   tipWei: string;
   liked: boolean;
   reposted: boolean;
+  bookmarked: boolean;
+  /** Image URLs attached to the post. */
+  media: string[];
 };
 
 export type Notification = {

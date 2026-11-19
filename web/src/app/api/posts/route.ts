@@ -7,9 +7,14 @@ import { notifyMentions } from "@/server/notify";
 
 export const POST = handle(async (req: Request) => {
   const me = await requireMe();
-  const b = await body<{ body: string; roomId?: string | null; replyTo?: string | null }>(req);
+  const b = await body<{ body: string; roomId?: string | null; replyTo?: string | null; mediaIds?: string[] }>(req);
   const text = String(b.body ?? "").trim();
-  if (!text) throw new HttpError(400, "Write something first.");
+  const mediaIds = Array.isArray(b.mediaIds) ? b.mediaIds.filter((x) => /^[a-z0-9]{24}$/.test(String(x))).slice(0, 4) : [];
+  if (mediaIds.length) {
+    const own = await sql()`select id from media where id in ${sql()(mediaIds)} and user_id = ${me.id}`;
+    if (own.length !== mediaIds.length) throw new HttpError(400, "Those images aren't yours.");
+  }
+  if (!text && !mediaIds.length) throw new HttpError(400, "Write something first.");
   if (text.length > 500) throw new HttpError(400, "Posts are 500 characters at most.");
   if (!(await rateLimit(`post:${me.id}`, 10, 60))) throw new HttpError(429, "You're posting fast. Wait a minute.");
   if (b.roomId) {
@@ -17,7 +22,7 @@ export const POST = handle(async (req: Request) => {
     if (!m) throw new HttpError(403, "Join that room first.");
   }
   const [p] = await sql()`
-    insert into posts (user_id, body, room_id, reply_to_id) values (${me.id}, ${text}, ${b.roomId ?? null}, ${b.replyTo ?? null}) returning id`;
+    insert into posts (user_id, body, room_id, reply_to_id, media_ids) values (${me.id}, ${text}, ${b.roomId ?? null}, ${b.replyTo ?? null}, ${mediaIds}) returning id`;
   if (b.replyTo) {
     await sql()`update posts set reply_count = reply_count + 1 where id = ${b.replyTo}`;
     const [parent] = await sql()`select user_id from posts where id = ${b.replyTo}`;

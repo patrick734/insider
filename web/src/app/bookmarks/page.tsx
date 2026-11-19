@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
-import { Corners, Main, PageHeader } from "@/components/page";
+import { redirect } from "next/navigation";
+import { Empty, Main, PageHeader } from "@/components/page";
 import { Rail } from "@/components/rail";
+import { PostList } from "@/components/post";
+import { getMe } from "@/server/auth";
+import { bookmarked } from "@/server/queries";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Bookmarks" };
 
-export default function Page() {
+export default async function Bookmarks() {
+  const me = await getMe();
+  if (!me) redirect("/");
+  const posts = await bookmarked(me.id);
   return (
     <>
       <Main>
-        <PageHeader title="Bookmarks" />
-        <section className="panel art m-4 min-h-[200px] p-6 sm:m-5">
-          <Corners />
-          <span className="label">// SAVED POSTS</span>
-          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-soft">Posts you bookmark will show here.</p>
-        </section>
+        <PageHeader title="Bookmarks" sub="ONLY YOU CAN SEE THESE" />
+        {posts.length ? <PostList posts={posts} /> : <Empty title="// NOTHING SAVED YET">Tap the bookmark on any post to keep it here.</Empty>}
       </Main>
       <Rail />
     </>

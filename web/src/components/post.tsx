@@ -27,12 +27,14 @@ export function PostCard({ post, compactCards = false }: { post: Post; compactCa
   const [reposted, setReposted] = useState(post.reposted);
   const [reposts, setReposts] = useState(post.repostCount);
   const [tipWei, setTipWei] = useState(BigInt(post.tipWei));
+  const [saved, setSaved] = useState(post.bookmarked);
   const [busy, setBusy] = useState(false);
   const u = post.user;
 
-  const toggle = async (what: "like" | "repost") => {
+  const toggle = async (what: "like" | "repost" | "bookmark") => {
     if (!me) return login();
-    if (what === "like") {
+    if (what === "bookmark") setSaved(!saved);
+    else if (what === "like") {
       setLiked(!liked);
       setLikes((n) => n + (liked ? -1 : 1));
     } else {
@@ -87,6 +89,16 @@ export function PostCard({ post, compactCards = false }: { post: Post; compactCa
           )}
         </div>
         <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-normal text-body">{post.body}</p>
+
+        {post.media.length > 0 && (
+          <div className={`mt-3 grid gap-1 ${post.media.length > 1 ? "grid-cols-2" : ""}`}>
+            {post.media.map((src) => (
+              <a key={src} href={src} target="_blank" rel="noreferrer" className="block overflow-hidden border border-accent/25">
+                <img src={src} alt="" loading="lazy" className={`w-full object-cover ${post.media.length > 1 ? "aspect-square" : "max-h-[420px]"}`} />
+              </a>
+            ))}
+          </div>
+        )}
 
         {post.trade && (
           <div className="panel mt-3 flex items-center gap-3 px-3.5 py-3 sm:gap-3.5">
@@ -146,6 +158,9 @@ export function PostCard({ post, compactCards = false }: { post: Post; compactCa
             <Icon name="views" size={17} />
             {compact(post.viewCount)}
           </span>
+          <button onClick={() => void toggle("bookmark")} className={saved ? "text-accent" : "hover:text-text"} aria-pressed={saved} aria-label={saved ? "Remove bookmark" : "Bookmark"}>
+            <Icon name="bookmark" size={17} />
+          </button>
         </div>
       </div>
     </article>
