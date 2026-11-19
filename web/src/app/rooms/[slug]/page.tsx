@@ -5,12 +5,13 @@ import { getMe } from "@/server/auth";
 import { postsByUser, roomBySlug, roomStats } from "@/server/queries";
 import { market } from "@/server/market";
 import { RoomClient } from "@/components/room-client";
+import { SITE } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const room = await roomBySlug((await params).slug);
-  return room ? { title: room.title, description: room.topic ?? `${room.title} on Insider` } : {};
+  return room ? { title: room.title, description: room.topic ?? `${room.title} on ${SITE.name}` } : {};
 }
 
 export default async function RoomPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -6,7 +6,7 @@ fees, in-app swaps that pay the host, and verified on-chain PnL.
 ## Layout
 
 ```
-contracts/          Foundry: InsiderKeys, RoomAccess, SplitterFactory + RoomFeeSplitter (tests in contracts/test)
+contracts/          Foundry: RoomKeys, RoomAccess, SplitterFactory + RoomFeeSplitter (tests in contracts/test)
 db/migrations/      Postgres schema, applied in order by `npm run migrate`
 packages/core/      Shared code: chain config, ABIs, database, sessions, room access rules, chat rules
 web/                Next.js app: every screen, desktop and mobile, plus the REST API (src/app/api)
@@ -25,7 +25,7 @@ services/indexer/   Reads the contracts and room coins into Postgres; confirms s
 - **Chat:** browsers get a two-minute ticket from the web app and open a socket to the realtime service. Messages are
   checked (access, bans, mutes, slow mode, 5 per 10 seconds), stored in Postgres (partitioned by month) and fanned
   out through Redis. Hosts and mods can delete, mute, remove and set slow mode.
-- **Keys:** price `0.002 + 0.00015·s + 0.000002·min(s,40)²` ETH; 8% fee (4% host, 2% protocol, 2% holders); a flip
+- **Keys (RoomKeys):** price `0.002 + 0.00015·s + 0.000002·min(s,40)²` ETH; 8% fee (4% host, 2% protocol, 2% holders); a flip
   fee from 4% down to 0 over 24 hours that goes to holders; creator's first key locked; 2-5 minute creator-only
   window; at most 5 keys and 10% of supply per buy; 30-minute sell cooldown. Holder rewards stream over 3 days, so
   buying right before a payout earns little. Fee changes are timelocked (2 days) and hard-capped (10%).
@@ -62,10 +62,21 @@ forge script script/Deploy.s.sol --rpc-url https://sepolia.base.org --account <k
 
 The script prints the three addresses for the env file. Set `START_BLOCK` to the deploy block.
 
-## Before mainnet keys
+## Mainnet
 
-The plan's rule stands: keys stay on testnet until a third-party audit of InsiderKeys, RoomAccess and the splitter,
-and a re-test of the fixes. Coin-gated rooms, chat and swaps don't depend on the key contracts and can go live first.
+Contracts deploy straight to Base mainnet. They haven't had a third-party audit, so:
+
+- Make `OWNER` a Safe multisig (the deploy script refuses to run on mainnet without `OWNER` and `TREASURY`).
+- The owner can't touch user funds: it can only change fee splits (2-day timelock, hard-capped at 10%), the
+  protocol fee recipient and the 2-5 minute creator window.
+- Get an audit as soon as there's real value in key markets, and run a bug bounty after it.
+
+## Renaming
+
+The name lives in three env values: `NEXT_PUBLIC_BRAND_NAME`, `NEXT_PUBLIC_BRAND_DOMAIN` and
+`NEXT_PUBLIC_BRAND_TAGLINE`. Change them and rebuild; nothing in the code mentions the name. The contracts use neutral
+names (RoomKeys, RoomAccess, RoomFeeSplitter) so a rename never needs a redeploy. Internal identifiers (the `@insider`
+package scope, cookie and token names) aren't shown to users.
 
 ## Production notes
 

@@ -6,6 +6,7 @@ import { Rail } from "@/components/rail";
 import { coins, liveRooms, roomStats, topEarners, users } from "@/server/queries";
 import { compact, displayName, eth, profileHref } from "@/lib/format";
 import { sql } from "@insider/core";
+import { SITE } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Explore" };
@@ -203,7 +204,7 @@ async function UsersTab({ sort }: { sort: "top" | "new" | "earners" }) {
   return (
     <>
       {sub}
-      <p className="mono px-4 pb-2 pt-4 text-[11px] text-muted sm:px-5">{sort === "new" ? "Newest people on Insider." : "People with the most key holders."}</p>
+      <p className="mono px-4 pb-2 pt-4 text-[11px] text-muted sm:px-5">{sort === "new" ? `Newest people on ${SITE.name}.` : "People with the most key holders."}</p>
       <div className="divide-line">
         {list.map((u) => (
           <Link key={u.id} href={profileHref(u)} className="flex items-center gap-3 px-4 py-3 text-text hover:text-text sm:px-5">

@@ -84,7 +84,7 @@ const posts: [string, number, string, Record<string, unknown> | null, string | n
   ["juno", 130, "Key chat is open. Holders get my next three calls there before they go on the timeline.", null, null, [31, 12, 240, 6800], false],
   ["mira", 60 * 24 * 4, "How my calls work: key holders get them first in the key chat, the $GRID room gets them during the call, the timeline gets them after. Every call is checked on-chain.", null, null, [92, 140, 1100, 22000], true],
   ["insider", 60 * 24, "Founding hosts: applications are open. Host a coin room, keep a share of the swap fees it makes, and open keys for your regulars.", null, null, [84, 211, 1200, 41000], true],
-  ["insider", 60 * 24 * 3, "Keys are live on Base Sepolia. Any room host can open keys. Holders get the key chat, early calls and a share of the room's fees.", null, null, [52, 140, 860, 28000], false],
+  ["insider", 60 * 24 * 3, "Keys are live on Base. Any room host can open keys. Holders get the key chat, early calls and a share of the room's fees.", null, null, [52, 140, 860, 28000], false],
   ["insider", 60 * 24 * 7, "Verified PnL is on. Link your wallet and your trades show on your profile, checked on-chain. No screenshots needed.", null, null, [61, 98, 734, 24000], false],
 ];
 for (const [who, mins, body, trade, room, [replies, reposts, likes, views], pinned] of posts) {

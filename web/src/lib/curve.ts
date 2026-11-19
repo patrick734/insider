@@ -1,4 +1,4 @@
-/** The key curve, mirrored from InsiderKeys.sol so prices show without a chain read. All values in wei. */
+/** The key curve, mirrored from RoomKeys.sol so prices show without a chain read. All values in wei. */
 const P0 = 2_000_000_000_000_000n; // 0.002 ETH
 const ALPHA = 150_000_000_000_000n; // 0.00015 ETH
 const BETA = 2_000_000_000_000n; // 0.000002 ETH

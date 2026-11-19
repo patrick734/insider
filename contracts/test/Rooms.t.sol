@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {InsiderKeys} from "../src/InsiderKeys.sol";
+import {RoomKeys} from "../src/RoomKeys.sol";
 import {RoomAccess} from "../src/RoomAccess.sol";
 import {SplitterFactory, RoomFeeSplitter} from "../src/RoomFeeSplitter.sol";
 
@@ -29,13 +29,13 @@ contract MockWETH is ERC20 {
 }
 
 contract RejectsEth {
-    function create(InsiderKeys keys) external payable {
+    function create(RoomKeys keys) external payable {
         keys.createMarket{value: msg.value}(address(0));
     }
 }
 
 contract RoomsTest is Test {
-    InsiderKeys keys;
+    RoomKeys keys;
     RoomAccess access;
     SplitterFactory factory;
     MockWETH weth;
@@ -47,7 +47,7 @@ contract RoomsTest is Test {
 
     function setUp() public {
         vm.warp(1_800_000_000);
-        keys = new InsiderKeys(owner, treasury);
+        keys = new RoomKeys(owner, treasury);
         access = new RoomAccess(keys);
         weth = new MockWETH();
         factory = new SplitterFactory(keys, address(weth), treasury, owner);

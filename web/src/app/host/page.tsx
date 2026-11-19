@@ -5,6 +5,7 @@ import { Rail } from "@/components/rail";
 import { HostForm } from "@/components/host-form";
 import { getMe } from "@/server/auth";
 import { roomsOfHost } from "@/server/queries";
+import { SITE } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Host a room" };
@@ -22,7 +23,7 @@ export default async function Host() {
           <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-body">
             {[
               "Your room's holders chat, call trades and swap the coin without leaving the room.",
-              "Every in-app swap pays a 1% fee: 60% to you, 20% to your key holders, 20% to Insider.",
+              `Every in-app swap pays a 1% fee: 60% to you, 20% to your key holders, 20% to ${SITE.name}.`,
               "Open keys and you earn 4% of every key trade. Holders get the key chat and a share of room fees.",
               "Coin holders get in free at the balance you set. Keys are optional.",
             ].map((t) => (

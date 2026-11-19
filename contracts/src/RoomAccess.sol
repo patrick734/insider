@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {InsiderKeys} from "./InsiderKeys.sol";
+import {RoomKeys} from "./RoomKeys.sol";
 
 /// @title Room access gate
 /// @notice A wallet can enter a host's room if it holds at least one of the host's keys, or holds at least the host's
@@ -14,14 +14,14 @@ contract RoomAccess {
         uint256 threshold;
     }
 
-    InsiderKeys public immutable keys;
+    RoomKeys public immutable keys;
     mapping(address host => Gate) public gates;
 
     event GateUpdated(address indexed host, address indexed coin, uint256 threshold);
 
     error ZeroThreshold();
 
-    constructor(InsiderKeys keys_) {
+    constructor(RoomKeys keys_) {
         keys = keys_;
     }
 

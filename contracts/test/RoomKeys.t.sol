@@ -2,10 +2,10 @@
 pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {InsiderKeys} from "../src/InsiderKeys.sol";
+import {RoomKeys} from "../src/RoomKeys.sol";
 
-contract InsiderKeysTest is Test {
-    InsiderKeys keys;
+contract RoomKeysTest is Test {
+    RoomKeys keys;
     address owner = makeAddr("owner");
     address protocol = makeAddr("protocol");
     address host = makeAddr("host");
@@ -15,7 +15,7 @@ contract InsiderKeysTest is Test {
 
     function setUp() public {
         vm.warp(1_800_000_000);
-        keys = new InsiderKeys(owner, protocol);
+        keys = new RoomKeys(owner, protocol);
         vm.deal(host, 100 ether);
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
@@ -85,20 +85,20 @@ contract InsiderKeysTest is Test {
 
         vm.warp(vm.getBlockTimestamp() + 1 days);
         vm.prank(host);
-        vm.expectRevert(InsiderKeys.CreatorKeyLocked.selector);
+        vm.expectRevert(RoomKeys.CreatorKeyLocked.selector);
         keys.sellKeys(host, 1, 0);
     }
 
     function test_cannotCreateTwice() public {
         _create();
         vm.prank(host);
-        vm.expectRevert(InsiderKeys.MarketExists.selector);
+        vm.expectRevert(RoomKeys.MarketExists.selector);
         keys.createMarket{value: 1 ether}(address(0));
     }
 
     function test_buyNeedsMarket() public {
         vm.prank(alice);
-        vm.expectRevert(InsiderKeys.NoMarket.selector);
+        vm.expectRevert(RoomKeys.NoMarket.selector);
         keys.buyKeys{value: 1 ether}(host, 1);
     }
 
@@ -108,7 +108,7 @@ contract InsiderKeysTest is Test {
         _create();
         uint256 cost = keys.getBuyPriceAfterFee(host, 1);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(InsiderKeys.CreatorOnly.selector, keys.publicFrom(host)));
+        vm.expectRevert(abi.encodeWithSelector(RoomKeys.CreatorOnly.selector, keys.publicFrom(host)));
         keys.buyKeys{value: cost}(host, 1);
 
         // The creator can still buy inside the window.
@@ -125,7 +125,7 @@ contract InsiderKeysTest is Test {
         assertEq(keys.maxBuy(host), 1);
         uint256 cost = keys.getBuyPriceAfterFee(host, 2);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(InsiderKeys.TooManyKeys.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(RoomKeys.TooManyKeys.selector, 1));
         keys.buyKeys{value: cost}(host, 2);
 
         _grow(20);
@@ -143,7 +143,7 @@ contract InsiderKeysTest is Test {
         _buy(alice, 1);
         uint256 until = vm.getBlockTimestamp() + 30 minutes;
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(InsiderKeys.Cooldown.selector, until));
+        vm.expectRevert(abi.encodeWithSelector(RoomKeys.Cooldown.selector, until));
         keys.sellKeys(host, 1, 0);
 
         vm.warp(until);
@@ -184,7 +184,7 @@ contract InsiderKeysTest is Test {
         vm.warp(vm.getBlockTimestamp() + 2 days);
         uint256 out = keys.getSellPriceAfterFee(host, alice, 1);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(InsiderKeys.Slippage.selector, out));
+        vm.expectRevert(abi.encodeWithSelector(RoomKeys.Slippage.selector, out));
         keys.sellKeys(host, 1, out + 1);
     }
 
@@ -192,7 +192,7 @@ contract InsiderKeysTest is Test {
         _open();
         uint256 cost = keys.getBuyPriceAfterFee(host, 1);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(InsiderKeys.NotEnoughEth.selector, cost));
+        vm.expectRevert(abi.encodeWithSelector(RoomKeys.NotEnoughEth.selector, cost));
         keys.buyKeys{value: cost - 1}(host, 1);
 
         uint256 before = alice.balance;
@@ -220,12 +220,12 @@ contract InsiderKeysTest is Test {
 
     function test_feeTimelockAndCap() public {
         vm.prank(owner);
-        vm.expectRevert(InsiderKeys.FeeTooHigh.selector);
+        vm.expectRevert(RoomKeys.FeeTooHigh.selector);
         keys.proposeFees(500, 300, 300);
 
         vm.prank(owner);
         keys.proposeFees(300, 200, 300);
-        vm.expectRevert(InsiderKeys.NotReady.selector);
+        vm.expectRevert(RoomKeys.NotReady.selector);
         keys.executeFees();
 
         vm.warp(vm.getBlockTimestamp() + 2 days);
@@ -244,7 +244,7 @@ contract InsiderKeysTest is Test {
         vm.expectRevert();
         keys.setProtocolRecipient(alice);
         vm.prank(owner);
-        vm.expectRevert(InsiderKeys.BadWindow.selector);
+        vm.expectRevert(RoomKeys.BadWindow.selector);
         keys.setSniperWindow(10 minutes);
     }
 

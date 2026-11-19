@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-/// @title Insider access keys
+/// @title Room access keys
 /// @notice One key market per creator ("subject"). Keys unlock the creator's room and a share of the room's fees.
 ///
 /// Price of the next key at supply s:  P(s) = 0.002 + 0.00015·s + 0.000002·min(s, 40)²  ETH
@@ -21,7 +21,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// Guards: the creator buys and locks key 1 when creating the market; for a short window after creation only the
 /// creator can buy; at most 5 keys and at most 10% of supply per buy; a 30-minute sell cooldown after a wallet's
 /// last buy. Keys cannot be transferred.
-contract InsiderKeys is Ownable2Step, ReentrancyGuard {
+contract RoomKeys is Ownable2Step, ReentrancyGuard {
     // ---------------------------------------------------------------- curve
     uint256 public constant P0 = 0.002 ether;
     uint256 public constant ALPHA = 0.00015 ether;

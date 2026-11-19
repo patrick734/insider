@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "@/lib/session";
+import { SITE } from "@/lib/config";
 
 export function HostForm({ signedIn, hasHandle }: { signedIn: boolean; hasHandle: boolean }) {
   const { login } = useSession();
@@ -49,7 +50,7 @@ export function HostForm({ signedIn, hasHandle }: { signedIn: boolean; hasHandle
         className="input"
       />
       <label className="mono flex items-center gap-2 text-xs text-muted">
-        insider.family/rooms/
+        {SITE.domain}/rooms/
         <input value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} maxLength={32} placeholder="grid" className="input h-9 flex-1" />
       </label>
       <input value={f.topic} onChange={(e) => setF({ ...f, topic: e.target.value })} maxLength={120} placeholder="What the room is about (optional)" className="input" />

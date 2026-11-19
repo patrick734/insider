@@ -3,7 +3,7 @@ import json, os
 
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.dirname(here)
-items = [("keysAbi", "InsiderKeys", "InsiderKeys"), ("roomAccessAbi", "RoomAccess", "RoomAccess"),
+items = [("keysAbi", "RoomKeys", "RoomKeys"), ("roomAccessAbi", "RoomAccess", "RoomAccess"),
          ("splitterFactoryAbi", "RoomFeeSplitter", "SplitterFactory"), ("splitterAbi", "RoomFeeSplitter", "RoomFeeSplitter")]
 s = "// Generated from contracts/out by scripts/abi.py. Do not edit.\n\n"
 for name, file, contract in items:

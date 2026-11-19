@@ -2,7 +2,7 @@ import { base, baseSepolia } from "viem/chains";
 import { createPublicClient, fallback, http, type Address, type PublicClient } from "viem";
 import { envList } from "./env";
 
-export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 84532);
+export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
 export const chain = CHAIN_ID === base.id ? base : baseSepolia;
 
 export const ADDRESSES = {

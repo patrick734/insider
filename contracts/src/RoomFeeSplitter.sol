@@ -6,7 +6,7 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {InsiderKeys} from "./InsiderKeys.sol";
+import {RoomKeys} from "./RoomKeys.sol";
 
 interface IWETH {
     function withdraw(uint256) external;
@@ -26,7 +26,7 @@ contract SplitterFactory is Ownable2Step {
         uint16 treasuryBps;
     }
 
-    InsiderKeys public immutable keys;
+    RoomKeys public immutable keys;
     address public immutable weth;
     address public immutable implementation;
     address public treasury;
@@ -44,7 +44,7 @@ contract SplitterFactory is Ownable2Step {
     error NotReady();
     error ZeroAddress();
 
-    constructor(InsiderKeys keys_, address weth_, address treasury_, address owner_) Ownable(owner_) {
+    constructor(RoomKeys keys_, address weth_, address treasury_, address owner_) Ownable(owner_) {
         if (treasury_ == address(0)) revert ZeroAddress();
         keys = keys_;
         weth = weth_;
@@ -131,7 +131,7 @@ contract RoomFeeSplitter is ReentrancyGuard {
 
         // The host gets the remainder, so rounding dust never stays behind.
         (, uint16 holdersBps, uint16 treasuryBps) = factory.shares();
-        InsiderKeys keys = factory.keys();
+        RoomKeys keys = factory.keys();
         uint256 treasuryAmt = (bal * treasuryBps) / 10_000;
         uint256 holdersAmt = keys.marketExists(host) ? (bal * holdersBps) / 10_000 : 0;
         uint256 hostAmt = bal - treasuryAmt - holdersAmt;

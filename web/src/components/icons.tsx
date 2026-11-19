@@ -1,3 +1,5 @@
+import { SITE } from "@/lib/config";
+
 export const ICONS = {
   home: "M3 10.5 12 3l9 7.5V21H3z",
   explore: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-3.5-3.5",
@@ -53,7 +55,10 @@ export function LogoMark({ size = 30, color = "#2EA8FF", glow = true }: { size?:
 export function Wordmark({ size = 14 }: { size?: number }) {
   return (
     <span className="mono font-bold" style={{ letterSpacing: "0.16em", fontSize: size }}>
-      INSIDER<span className="text-accent font-medium" style={{ letterSpacing: "0.02em" }}>.family</span>
+      {SITE.mark}
+      <span className="text-accent font-medium" style={{ letterSpacing: "0.02em" }}>
+        {SITE.tld}
+      </span>
     </span>
   );
 }

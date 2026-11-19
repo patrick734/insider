@@ -12,9 +12,9 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "6
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
-  title: { default: "Insider", template: "%s · Insider" },
+  title: { default: SITE.name, template: `%s · ${SITE.name}` },
   description: SITE.tagline,
-  openGraph: { title: "Insider", description: SITE.tagline, siteName: "insider.family" },
+  openGraph: { title: SITE.name, description: SITE.tagline, siteName: SITE.domain },
 };
 
 export const viewport: Viewport = { themeColor: "#000000", width: "device-width", initialScale: 1, viewportFit: "cover" };

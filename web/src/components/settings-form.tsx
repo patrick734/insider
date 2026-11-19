@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSession, type Me } from "@/lib/session";
+import { SITE } from "@/lib/config";
 
 export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }) {
   const { logout } = useSession();
@@ -38,7 +39,7 @@ export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }
       <label className="flex items-center justify-between gap-3">
         <span>
           <b className="block text-sm">Show my verified PnL</b>
-          <span className="text-xs text-muted">Profit on trades made through Insider, checked on-chain. Hide it any time.</span>
+          <span className="text-xs text-muted">Profit on trades made through {SITE.name}, checked on-chain. Hide it any time.</span>
         </span>
         <input type="checkbox" checked={f.pnlVisible} onChange={(e) => setF({ ...f, pnlVisible: e.target.checked })} className="h-5 w-5 accent-[#2EA8FF]" />
       </label>

@@ -5,7 +5,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { createPublicClient, createWalletClient, custom, http, type Hash, type WalletClient } from "viem";
 import { chain } from "@insider/core/chain";
 import type { UserLite } from "./types";
-import { RPC_URL } from "./config";
+import { RPC_URL, SITE } from "./config";
 
 export type Me = UserLite & { bio: string | null; xHandle: string | null };
 
@@ -85,7 +85,7 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     (async () => {
       const { nonce } = (await fetch("/api/auth/nonce", { cache: "no-store" }).then((r) => r.json())) as { nonce: string };
       const message = [
-        `insider.family wants you to sign in with your wallet.`,
+        `${SITE.domain} wants you to sign in with your wallet.`,
         ``,
         `Address: ${active.address.toLowerCase()}`,
         `Chain: ${chain.id}`,

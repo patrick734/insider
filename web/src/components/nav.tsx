@@ -7,6 +7,7 @@ import { Icon, LogoMark, Wordmark, type IconName } from "./icons";
 import { Avatar } from "./avatar";
 import { readClient, useSession } from "@/lib/session";
 import { eth } from "@/lib/format";
+import { SITE } from "@/lib/config";
 
 type Counts = { notifications: number; messages: number };
 
@@ -55,7 +56,7 @@ export function SideNav({ counts: initial }: { counts: Counts }) {
   const [more, setMore] = useState(false);
   return (
     <nav aria-label="Main" className="sticky top-0 flex h-dvh w-[250px] flex-col gap-1 overflow-y-auto px-4 py-[18px] [&>*]:flex-none">
-      <Link href="/" aria-label="Insider home" className="flex items-center gap-2.5 px-1.5 pb-4 pt-1 text-text hover:text-text">
+      <Link href="/" aria-label={`${SITE.name} home`} className="flex items-center gap-2.5 px-1.5 pb-4 pt-1 text-text hover:text-text">
         <LogoMark />
         <Wordmark />
       </Link>

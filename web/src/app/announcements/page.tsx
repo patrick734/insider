@@ -6,6 +6,7 @@ import { PostList } from "@/components/post";
 import { getMe } from "@/server/auth";
 import { officialAccount, officialPosts } from "@/server/queries";
 import Link from "next/link";
+import { SITE } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Announcements" };
@@ -16,7 +17,7 @@ export default async function Announcements() {
   return (
     <>
       <Main>
-        <PageHeader title="Announcements" sub="OFFICIAL UPDATES FROM THE INSIDER TEAM" />
+        <PageHeader title="Announcements" sub={`OFFICIAL UPDATES FROM THE ${SITE.name.toUpperCase()} TEAM`} />
         {account && (
           <section className="panel mx-4 my-4 flex items-center gap-3.5 p-4 sm:mx-5">
             <Corners />
@@ -25,7 +26,7 @@ export default async function Announcements() {
             </span>
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="flex items-center gap-2">
-                <b className="text-[17px]">Insider</b>
+                <b className="text-[17px]">{SITE.name}</b>
                 <span className="mono bg-accent px-1.5 text-[9.5px] font-bold tracking-[0.12em] text-on-accent">OFFICIAL</span>
               </span>
               <span className="mono truncate text-[11.5px] text-muted">@{account.handle} · product news, payouts and events</span>
