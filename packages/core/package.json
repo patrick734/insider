@@ -1,0 +1,21 @@
+{
+  "name": "@insider/core",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./*": "./src/*.ts" },
+  "scripts": {
+    "migrate": "tsx src/scripts/migrate.ts",
+    "seed": "tsx src/scripts/seed.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "jose": "6.1.3",
+    "postgres": "3.4.9",
+    "viem": "2.57.19"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.21",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

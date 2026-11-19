@@ -1,0 +1,14 @@
+{
+  "name": "insider",
+  "private": true,
+  "workspaces": ["packages/*", "web", "services/*"],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "migrate": "npm run migrate -w @insider/core",
+    "seed": "npm run seed -w @insider/core",
+    "realtime": "npm run start -w @insider/realtime",
+    "indexer": "npm run start -w @insider/indexer"
+  }
+}
