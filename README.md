@@ -55,6 +55,7 @@ Contracts:
 
 ```
 cd contracts
+npm install                         # OpenZeppelin
 forge test
 forge script script/Deploy.s.sol --rpc-url https://sepolia.base.org --account <keystore> --broadcast
 ```
