@@ -90,6 +90,20 @@ The name lives in three env values: `NEXT_PUBLIC_BRAND_NAME`, `NEXT_PUBLIC_BRAND
 names (RoomKeys, RoomAccess, RoomFeeSplitter) so a rename never needs a redeploy. Internal identifiers (the `@insider`
 package scope, cookie and token names) aren't shown to users.
 
+## Demo server
+
+`deploy/demo-setup.sh` puts the app online on an Ubuntu server that already runs Caddy, Node 22 and pm2, with sample
+data and demo sign-in (a "DEMO" strip shows on every page; it switches itself off once a Privy App ID is set):
+
+```
+git clone https://github.com/patrick734/insider.git ~/insider
+cd ~/insider && DOMAIN=insider.18-224-166-132.sslip.io bash deploy/demo-setup.sh
+```
+
+It installs Postgres and Redis if missing, writes `web/.env.local`, migrates, seeds, builds, starts `insider-web`
+(port 3200) and `insider-realtime` (port 4101) under pm2 and adds the domain to Caddy. Run the same command again to
+update. `*.sslip.io` names resolve to the IP inside them, so no DNS change is needed for a test address.
+
 ## Production notes
 
 - Postgres behind a pooler (transaction mode), Redis managed, the web app, realtime and indexer as separate services.
