@@ -23,7 +23,8 @@ export function publicClient(): PublicClient {
   client = createPublicClient({
     chain,
     transport: fallback(urls.map((u) => http(u, { timeout: 15_000, retryCount: 2 })), { rank: false }),
-    batch: { multicall: true },
+    // Multicall batching needs Multicall3, which Base has; set MULTICALL=0 on a bare local chain.
+    batch: { multicall: process.env.MULTICALL !== "0" },
   }) as PublicClient;
   return client;
 }

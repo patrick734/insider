@@ -121,7 +121,8 @@ contract RoomFeeSplitter is ReentrancyGuard {
     /// @notice Split everything held in ETH and WETH. Anyone may call.
     function distribute() external nonReentrant {
         address weth = factory.weth();
-        if (weth != address(0)) {
+        // Skip unwrapping where WETH isn't deployed (local chains); on Base it's a predeploy.
+        if (weth != address(0) && weth.code.length > 0) {
             uint256 w = IERC20(weth).balanceOf(address(this));
             if (w > 0) IWETH(weth).withdraw(w);
         }

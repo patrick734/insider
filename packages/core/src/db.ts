@@ -16,6 +16,7 @@ export function sql(): Sql {
       idle_timeout: 30,
       connect_timeout: 10,
       prepare: false,
+      onnotice: () => {},
       types: { bigint: postgres.BigInt },
       transform: { undefined: null },
     }) as unknown as Sql;

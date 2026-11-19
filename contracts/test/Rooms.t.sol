@@ -184,6 +184,15 @@ contract RoomsTest is Test {
         assertEq(t, 1_000);
     }
 
+    function test_distributeWithoutWethDeployed() public {
+        SplitterFactory f = new SplitterFactory(keys, address(0x4200000000000000000000000000000000000006), treasury, owner);
+        RoomFeeSplitter s = RoomFeeSplitter(payable(f.create(host)));
+        vm.deal(address(s), 1 ether);
+        uint256 hostBefore = host.balance;
+        s.distribute();
+        assertEq(host.balance - hostBefore, 0.8 ether);
+    }
+
     function test_cannotReinitialize() public {
         RoomFeeSplitter s = RoomFeeSplitter(payable(factory.create(host)));
         vm.expectRevert(RoomFeeSplitter.AlreadyInitialized.selector);
