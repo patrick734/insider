@@ -64,6 +64,17 @@ The script prints the three addresses for the env file. Set `START_BLOCK` to the
 
 ## Mainnet
 
+Deployed on Base mainnet (block 59,626,283):
+
+| Contract | Address |
+|---|---|
+| RoomKeys | [0x8e6Aa3707c2bE2F0472935c6bccB42222E15ADd2](https://basescan.org/address/0x8e6Aa3707c2bE2F0472935c6bccB42222E15ADd2) |
+| RoomAccess | [0x892814990B94Acd528d951571EBE1f3A40E90706](https://basescan.org/address/0x892814990B94Acd528d951571EBE1f3A40E90706) |
+| SplitterFactory | [0xD8a67860f648513D39B69292B3C4c09692889bC4](https://basescan.org/address/0xD8a67860f648513D39B69292B3C4c09692889bC4) |
+
+Owner `0x05f1d3984f32a9fcb2d019e78764a20bc57da13d`, treasury `0x982834a9fe99a801a99b7e15df624e8ad648a908`.
+Details in `contracts/deployments/base.json`.
+
 Contracts deploy straight to Base mainnet. They haven't had a third-party audit, so:
 
 - Make `OWNER` a Safe multisig (the deploy script refuses to run on mainnet without `OWNER` and `TREASURY`).

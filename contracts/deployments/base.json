@@ -1,0 +1,18 @@
+{
+  "chainId": 8453,
+  "network": "Base mainnet",
+  "deployedAt": "2026-11-19",
+  "startBlock": 59626283,
+  "owner": "0x05f1d3984f32a9fcb2d019e78764a20bc57da13d",
+  "treasury": "0x982834a9fe99a801a99b7e15df624e8ad648a908",
+  "contracts": {
+    "RoomKeys": "0x8e6Aa3707c2bE2F0472935c6bccB42222E15ADd2",
+    "RoomAccess": "0x892814990B94Acd528d951571EBE1f3A40E90706",
+    "SplitterFactory": "0xD8a67860f648513D39B69292B3C4c09692889bC4"
+  },
+  "transactions": {
+    "RoomKeys": "0x60b1d0c891ed15191d410a1401dd3e7c2074e39e6b13a0ad1f863a8654a84451",
+    "RoomAccess": "0x10e9a6826e0525fe4327f80b7ed774e06fb6ba7dcdbc0581cccc2967a47c0b34",
+    "SplitterFactory": "0x324426c523ddb03beaeee8a3ee96570627b7b3f6b859d18c70be2d9628b6800f"
+  }
+}
