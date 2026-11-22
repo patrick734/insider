@@ -49,7 +49,7 @@ export function useCounts(initial: Counts): Counts {
 }
 
 /** Desktop left menu. */
-export function SideNav({ counts: initial, foundersLeft }: { counts: Counts; foundersLeft: number }) {
+export function SideNav({ counts: initial, foundersLeft, waitlist = true }: { counts: Counts; foundersLeft: number; waitlist?: boolean }) {
   const path = usePathname();
   const { me, login } = useSession();
   const counts = useCounts(initial);
@@ -110,7 +110,7 @@ export function SideNav({ counts: initial, foundersLeft }: { counts: Counts; fou
             </span>
           </Link>
         ) : (
-          <JoinWaitlist left={foundersLeft} />
+          waitlist ? <JoinWaitlist left={foundersLeft} /> : <SignInButton />
         )}
       </div>
     </nav>
@@ -118,7 +118,7 @@ export function SideNav({ counts: initial, foundersLeft }: { counts: Counts; fou
 }
 
 /** Mobile: top bar (avatar opens the drawer, balance opens the wallet), bottom tabs and the drawer. */
-export function MobileChrome({ counts: initial, foundersLeft }: { counts: Counts; foundersLeft: number }) {
+export function MobileChrome({ counts: initial, foundersLeft, waitlist = true }: { counts: Counts; foundersLeft: number; waitlist?: boolean }) {
   const path = usePathname();
   const { me, login, logout } = useSession();
   const balanceWei = useBalance();
@@ -159,9 +159,15 @@ export function MobileChrome({ counts: initial, foundersLeft }: { counts: Counts
               {balanceWei ? eth(balanceWei) : "WALLET"}
             </Link>
           ) : (
-            <Link href="/waitlist" className="btn btn-on h-[30px] px-3 text-[10px]">
-              JOIN · {foundersLeft} LEFT
-            </Link>
+            waitlist ? (
+              <Link href="/waitlist" className="btn btn-on h-[30px] px-3 text-[10px]">
+                JOIN · {foundersLeft} LEFT
+              </Link>
+            ) : (
+              <button onClick={login} className="btn btn-on h-[30px] px-3 text-[10px]">
+                SIGN IN
+              </button>
+            )
           )}
         </header>
       )}
@@ -194,7 +200,7 @@ export function MobileChrome({ counts: initial, foundersLeft }: { counts: Counts
                   <span className="mono text-[11px] text-muted">@{me.handle ?? "set-a-handle"}</span>
                 </>
               ) : (
-                <JoinWaitlist left={foundersLeft} />
+                waitlist ? <JoinWaitlist left={foundersLeft} /> : <SignInButton />
               )}
             </div>
             {me && (
@@ -255,6 +261,16 @@ export function useBalance(): string | null {
     return () => clearInterval(t);
   }, [address]);
   return b;
+}
+
+/** Signed-out call to action when the app is open to everyone. */
+function SignInButton() {
+  const { login, signingIn } = useSession();
+  return (
+    <button onClick={login} disabled={signingIn} className="btn btn-on h-11 w-full shadow-[0_0_24px_rgba(46,168,255,0.55)]">
+      {signingIn ? "SIGNING IN…" : "SIGN IN"}
+    </button>
+  );
 }
 
 /** Signed-out call to action: the founder waitlist, with how many founder spots are left. */

@@ -47,10 +47,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {appOpen ? (
             <>
               <OnboardingGate />
-              <MobileChrome counts={counts} foundersLeft={left} />
+              <MobileChrome counts={counts} foundersLeft={left} waitlist={waitlistMode()} />
               <div className="mx-auto flex w-full max-w-[1320px] items-start">
                 <div className="hidden flex-none border-r border-accent/18 bg-black/55 lg:block">
-                  <SideNav counts={counts} foundersLeft={left} />
+                  <SideNav counts={counts} foundersLeft={left} waitlist={waitlistMode()} />
                 </div>
                 {children}
               </div>
