@@ -3,6 +3,7 @@ import { Corners, Main, PageHeader } from "@/components/page";
 import { Rail } from "@/components/rail";
 import { SITE } from "@/lib/config";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Privacy" };
 
 export default function Page() {

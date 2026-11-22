@@ -2,6 +2,7 @@ import Link from "next/link";
 import { activity, liveRooms } from "@/server/queries";
 import { ago } from "@/lib/format";
 import { CoinTile } from "./avatar";
+import { HotChip, Sparkline } from "./sparkline";
 import { Corners } from "./page";
 import { Icon } from "./icons";
 
@@ -31,13 +32,19 @@ export async function Rail() {
           </Link>
         </header>
         {rooms.length === 0 && <p className="px-3.5 py-4 text-sm text-muted">No rooms yet.</p>}
-        {rooms.map((r, i) => (
+        {rooms.map((r) => (
           <Link key={r.id} href={`/rooms/${r.slug}`} className="flex items-center gap-3 border-t border-accent/8 px-3.5 py-2.5 text-text first-of-type:border-t-0 hover:bg-accent/5 hover:text-text">
-            <CoinTile symbol={r.coinSymbol ?? r.slug} on={i === 0 && r.online > 0} />
+            <span className={r.heat >= 0.35 ? "heat" : ""} style={{ ["--heat" as string]: r.heat }} data-hot={r.heat >= 0.35 ? "1" : "0"}>
+              <CoinTile symbol={r.coinSymbol ?? r.slug} on={r.heat >= 0.35} />
+            </span>
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <b className="truncate text-sm font-semibold">{r.title}</b>
+              <span className="flex items-center gap-1.5">
+                <b className="truncate text-sm font-semibold">{r.title}</b>
+                <HotChip heat={r.heat} />
+              </span>
               <span className="mono truncate text-[11px] text-muted">{r.isLive ? (r.liveTitle ?? "live now") : (r.topic ?? (r.access === "gated" ? "holders only" : "open room"))}</span>
             </span>
+            <Sparkline values={r.keySpark} width={44} height={18} />
             <span className="mono flex flex-col items-end gap-0.5 text-[11px]">
               <b className="font-semibold text-text">{r.online}</b>
               <span className="text-dim">ONLINE</span>

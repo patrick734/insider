@@ -10,6 +10,7 @@
   --color-muted: #7e93a8;
   --color-dim: #5f7389;
   --color-on-accent: #00111f;
+  --color-pink: #ff4fa3;
   --color-panel: rgba(3, 10, 18, 0.85);
   --color-line: rgba(46, 168, 255, 0.14);
   --color-edge: rgba(46, 168, 255, 0.28);
@@ -234,6 +235,27 @@ body {
       linear-gradient(90deg, rgba(46, 168, 255, 0.16) 1px, transparent 1px),
       repeating-linear-gradient(var(--a, 60deg), rgba(154, 214, 255, 0.08) 0 2px, transparent 2px 14px);
     background-size: 100% 100%, 20px 20px, 20px 20px, 100% 100%;
+  }
+  /* Room heat: glow and pulse scale with --heat (0..1). */
+  .heat {
+    border-color: rgba(46, 168, 255, calc(0.22 + var(--heat, 0) * 0.75)) !important;
+    box-shadow: 0 0 calc(var(--heat, 0) * 36px) rgba(46, 168, 255, calc(var(--heat, 0) * 0.7));
+    background-image: radial-gradient(120% 90% at 50% 0%, rgba(46, 168, 255, calc(var(--heat, 0) * 0.38)), transparent 70%);
+  }
+  .heat[data-hot="1"] {
+    animation: heatpulse calc(2.8s - var(--heat, 0) * 1.5s) ease-in-out infinite;
+  }
+  @keyframes heatpulse {
+    0%, 100% { box-shadow: 0 0 calc(var(--heat, 0) * 12px) rgba(46, 168, 255, calc(var(--heat, 0) * 0.3)); }
+    50% { box-shadow: 0 0 calc(var(--heat, 0) * 52px) rgba(46, 168, 255, calc(var(--heat, 0) * 0.95)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .heat[data-hot="1"] { animation: none; }
+  }
+  /* Callers with a strong verified record. */
+  .trusted {
+    border-color: rgba(46, 168, 255, 0.85) !important;
+    box-shadow: 0 0 0 1px rgba(46, 168, 255, 0.35), 0 0 26px rgba(46, 168, 255, 0.35);
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;

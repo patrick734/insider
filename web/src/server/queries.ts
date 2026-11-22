@@ -3,6 +3,8 @@ import { sql } from "@insider/core";
 import type { ChatThread, Notification, Post, RoomLite, TradeCard, UserLite } from "@/lib/types";
 import { onlineCounts } from "./redis";
 import { USER_COLUMNS, iso, toUser } from "./rows";
+import { market } from "./market";
+import { priceAt } from "@/lib/curve";
 
 const db = () => sql();
 const U = () => db().unsafe(USER_COLUMNS);
@@ -18,7 +20,15 @@ const ROOM_SELECT = () => db()`
   ${PNL_JOIN()}
   left join coins c on c.address = r.coin_address`;
 
-function toRoom(r: Record<string, unknown>, online: Record<string, number>): RoomLite {
+type RoomActivity = { msgs: number; trades: number; supplies: number[] };
+
+/** Heat: people online, chat in the last 10 minutes, key trades in the last hour, plus a bump while live. */
+function heatOf(online: number, a: RoomActivity | undefined, isLive: boolean): number {
+  const h = Math.min(1, online / 40) * 0.45 + Math.min(1, (a?.msgs ?? 0) / 15) * 0.3 + Math.min(1, (a?.trades ?? 0) / 4) * 0.1 + (isLive ? 0.15 : 0);
+  return Math.round(Math.min(1, h) * 100) / 100;
+}
+
+function toRoom(r: Record<string, unknown>, online: Record<string, number>, a?: RoomActivity): RoomLite {
   const id = String(r.id);
   return {
     id,
@@ -32,12 +42,28 @@ function toRoom(r: Record<string, unknown>, online: Record<string, number>): Roo
     coinSymbol: (r.coin_symbol as string) ?? null,
     coinAddress: (r.coin_address as string) ?? null,
     host: toUser(r),
+    heat: heatOf(online[id] ?? 0, a, Boolean(r.is_live)),
+    msgs10m: a?.msgs ?? 0,
+    keySpark: (a?.supplies ?? []).map((s) => Number(priceAt(BigInt(s))) / 1e18),
   };
 }
 
 async function withOnline(rows: Record<string, unknown>[]): Promise<RoomLite[]> {
-  const online = await onlineCounts(rows.map((r) => String(r.id)));
-  return rows.map((r) => toRoom(r, online));
+  const ids = rows.map((r) => String(r.id));
+  const [online, act] = await Promise.all([
+    onlineCounts(ids),
+    ids.length
+      ? db()`
+          select r.id,
+            (select count(*) from messages m where m.room_id = r.id and m.created_at > now() - interval '10 minutes')::int as msgs,
+            (select count(*) from key_trades kt where kt.subject = h.address and kt.block_time > now() - interval '1 hour')::int as trades,
+            (select coalesce(array_agg(s.supply order by s.block_number), '{}')
+               from (select supply, block_number from key_trades kt where kt.subject = h.address order by block_number desc limit 24) s) as supplies
+          from rooms r join users h on h.id = r.host_id where r.id in ${db()(ids)}`
+      : Promise.resolve([]),
+  ]);
+  const byId = new Map(act.map((a) => [String(a.id), { msgs: Number(a.msgs), trades: Number(a.trades), supplies: (a.supplies as number[]) ?? [] }]));
+  return rows.map((r) => toRoom(r, online, byId.get(String(r.id))));
 }
 
 /** Rooms ordered by who's in them right now, then by recent chat. */
@@ -132,13 +158,16 @@ async function toPosts(rows: Record<string, unknown>[]): Promise<Post[]> {
   const liveIds = [...new Set(rows.filter((r) => r.room_live).map((r) => String(r.room_id)))];
   const liveRows = liveIds.length ? await db()`${ROOM_SELECT()} where r.id in ${db()(liveIds)}` : [];
   const live = new Map((await withOnline(liveRows)).map((r) => [r.id, r]));
+  // Receipts: market cap now for every coin called in these posts (mainnet only; cached a minute).
+  const coins = [...new Set(rows.map((r) => (r.trade as TradeCard | null)?.coin).filter(Boolean) as string[])];
+  const now = new Map(await Promise.all(coins.map(async (c) => [c, (await market(c))?.mcUsd ?? null] as const)));
   return rows.map((r) => ({
     id: String(r.id),
     body: r.body as string,
     createdAt: iso(r.created_at),
     user: toUser(r),
     room: r.room_slug ? { slug: r.room_slug as string, title: r.room_title as string } : null,
-    trade: (r.trade as TradeCard) ?? null,
+    trade: withReceipt((r.trade as TradeCard) ?? null, now),
     live: r.room_id ? (live.get(String(r.room_id)) ?? null) : null,
     pinned: Boolean(r.is_pinned),
     likeCount: Number(r.like_count),
@@ -151,6 +180,14 @@ async function toPosts(rows: Record<string, unknown>[]): Promise<Post[]> {
     bookmarked: Boolean(r.bookmarked),
     media: ((r.media_ids as string[]) ?? []).map((id) => `/api/media/${id}`),
   }));
+}
+
+/** Live change since the call when market data has the coin; otherwise the change recorded with the post. */
+function withReceipt(t: TradeCard | null, now: Map<string, number | null>): TradeCard | null {
+  if (!t) return null;
+  const mc = now.get(t.coin) ?? null;
+  if (mc && t.mcUsd) return { ...t, nowMcUsd: mc, changePct: (mc / t.mcUsd - 1) * 100 };
+  return t;
 }
 
 // ================================================================ users

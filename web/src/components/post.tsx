@@ -30,6 +30,8 @@ export function PostCard({ post, compactCards = false }: { post: Post; compactCa
   const [saved, setSaved] = useState(post.bookmarked);
   const [busy, setBusy] = useState(false);
   const u = post.user;
+  // A strong verified record (10+ trades, 60%+ wins over 30 days) makes the call card glow.
+  const trusted = !!u.record && u.record.trades >= 10 && u.record.winRate >= 0.6;
 
   const toggle = async (what: "like" | "repost" | "bookmark") => {
     if (!me) return login();
@@ -101,22 +103,37 @@ export function PostCard({ post, compactCards = false }: { post: Post; compactCa
         )}
 
         {post.trade && (
-          <div className="panel mt-3 flex items-center gap-3 px-3.5 py-3 sm:gap-3.5">
-            <span className={`mono flex-none px-2 py-1 text-[10.5px] font-bold tracking-[0.12em] ${post.trade.side === "sell" ? "bg-text text-black" : "bg-accent text-on-accent"}`}>
-              {post.trade.side === "sell" ? "SOLD" : "BOUGHT"}
-            </span>
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <b className="text-sm font-semibold">
-                {eth(post.trade.amountWei)} of ${post.trade.symbol}
-              </b>
-              <span className="mono text-[11px] text-muted">at {usd(post.trade.mcUsd)} MC · checked on Base</span>
-            </div>
-            {post.trade.changePct !== null && (
-              <div className="mono flex flex-col items-end gap-0.5">
-                <b className="glow text-[15px] text-accent">{pct(post.trade.changePct)}</b>
-                <span className="text-[10px] tracking-[0.1em] text-dim">SINCE POST</span>
+          <div className={`panel mt-3 px-3.5 py-3 ${trusted ? "trusted" : ""}`}>
+            <div className="flex items-center gap-3 sm:gap-3.5">
+              <span className={`mono flex-none px-2 py-1 text-[10.5px] font-bold tracking-[0.12em] ${post.trade.side === "sell" ? "bg-pink text-[#22000f]" : "bg-accent text-on-accent"}`}>
+                {post.trade.side === "sell" ? "SOLD" : "BOUGHT"}
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <b className="text-sm font-semibold">
+                  {eth(post.trade.amountWei)} of ${post.trade.symbol}
+                </b>
+                <span className="mono text-[11px] text-muted">
+                  entry {usd(post.trade.mcUsd)} MC{post.trade.nowMcUsd ? ` · now ${usd(post.trade.nowMcUsd)}` : ""}
+                </span>
               </div>
-            )}
+              {post.trade.changePct !== null && (
+                <div className="mono flex flex-col items-end gap-0.5">
+                  <b className={`text-[16px] ${post.trade.changePct >= 0 ? "glow text-accent" : "text-[#ff6fb4]"}`}>{pct(post.trade.changePct)}</b>
+                  <span className="inline-flex items-center gap-1 text-[10px] tracking-[0.1em] text-dim">
+                    {post.trade.nowMcUsd && <span className="dot !h-1.5 !w-1.5" />}
+                    {post.trade.nowMcUsd ? "LIVE SINCE CALL" : "SINCE CALL"}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="mono mt-2.5 flex items-center justify-between border-t border-accent/10 pt-2 text-[10px] tracking-[0.08em] text-dim">
+              <span>{post.trade.txHash ? "CHECKED ON BASE ✓" : "RECORDED AT POST TIME"}</span>
+              {u.record && u.record.trades > 0 && (
+                <span className={trusted ? "text-accent-soft" : ""}>
+                  {Math.round(u.record.winRate * 100)}% WIN · {u.record.trades} CALLS · 30D
+                </span>
+              )}
+            </div>
           </div>
         )}
 

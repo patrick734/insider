@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Corners, Main, PageHeader } from "@/components/page";
 import { Rail } from "@/components/rail";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Terms" };
 
 export default function Page() {

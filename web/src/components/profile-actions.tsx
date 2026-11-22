@@ -57,6 +57,9 @@ export function ProfileActions({ profile: p, isMe }: { profile: Profile; isMe: b
     coinSymbol: null,
     coinAddress: null,
     host: p,
+    heat: 0,
+    msgs10m: 0,
+    keySpark: [],
   };
 
   return (

@@ -30,7 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <Providers me={me}>
           {demoLoginEnabled() && (
-            <div className="mono bg-accent px-4 py-1 text-center text-[10.5px] font-bold tracking-[0.14em] text-on-accent">DEMO · SAMPLE DATA · SIGN IN AS ANY SAMPLE ACCOUNT</div>
+            <div className="mono bg-accent px-4 py-1 text-center text-[10.5px] font-bold tracking-[0.14em] text-on-accent">DEMO · SAMPLE DATA<span className="hidden sm:inline"> · SIGN IN AS ANY SAMPLE ACCOUNT</span></div>
           )}
           <RefCapture />
           <OnboardingGate />

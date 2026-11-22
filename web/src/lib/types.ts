@@ -7,6 +7,8 @@ export type UserLite = {
   isOfficial: boolean;
   /** Verified 30-day PnL in wei, if the user shows it. */
   pnlWei: string | null;
+  /** Verified 30-day calling record, if the user shows it. */
+  record?: { winRate: number; trades: number } | null;
 };
 
 export type TradeCard = {
@@ -17,6 +19,8 @@ export type TradeCard = {
   mcUsd: number | null;
   changePct: number | null;
   txHash: string | null;
+  /** Market cap now (mainnet, from market data); when set, changePct is live since the call. */
+  nowMcUsd?: number | null;
 };
 
 export type RoomLite = {
@@ -31,6 +35,12 @@ export type RoomLite = {
   coinSymbol: string | null;
   coinAddress: string | null;
   host: UserLite;
+  /** 0..1: how busy the room is right now (people online, recent chat, recent key trades, live call). */
+  heat: number;
+  /** Messages in the last 10 minutes. */
+  msgs10m: number;
+  /** Key price (ETH) after each of the last trades, oldest first. */
+  keySpark: number[];
 };
 
 export type Post = {

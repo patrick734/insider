@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CoinTile } from "@/components/avatar";
+import { HotChip, Sparkline } from "@/components/sparkline";
 import { Empty, Main, PageHeader } from "@/components/page";
 import { Rail } from "@/components/rail";
 import { liveRooms } from "@/server/queries";
@@ -37,12 +38,15 @@ export default async function Rooms({ searchParams }: { searchParams: Promise<{ 
           </Empty>
         ) : (
           <div className="divide-line">
-            {list.map((r, i) => (
+            {list.map((r) => (
               <Link key={r.id} href={`/rooms/${r.slug}`} className="flex items-center gap-3 px-4 py-3.5 text-text hover:bg-accent/4 hover:text-text sm:px-5">
-                <CoinTile symbol={r.coinSymbol ?? r.slug} size={44} on={r.isLive || (i === 0 && r.online > 0)} />
+                <span className={r.heat >= 0.35 ? "rounded-sm heat" : ""} style={{ ["--heat" as string]: r.heat }} data-hot={r.heat >= 0.35 ? "1" : "0"}>
+                  <CoinTile symbol={r.coinSymbol ?? r.slug} size={44} on={r.isLive || r.heat >= 0.35} />
+                </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="flex items-center gap-2">
                     <b className="truncate text-[15px] font-semibold">{r.title}</b>
+                    <HotChip heat={r.heat} />
                     {r.isLive && (
                       <span className="mono inline-flex items-center gap-1 text-[9.5px] font-bold tracking-[0.14em] text-accent">
                         <span className="dot !h-1.5 !w-1.5" />
@@ -54,6 +58,7 @@ export default async function Rooms({ searchParams }: { searchParams: Promise<{ 
                     @{r.host.handle} · {r.isLive ? (r.liveTitle ?? "live now") : (r.topic ?? (r.access === "gated" ? "holders only" : "open room"))}
                   </span>
                 </span>
+                <Sparkline values={r.keySpark} className="hidden sm:block" />
                 <span className="mono flex flex-col items-end text-[11px]">
                   <b className="text-accent">● {r.online}</b>
                   <span className="text-dim">{r.access === "gated" ? "HOLDERS" : "OPEN"}</span>

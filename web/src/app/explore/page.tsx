@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Avatar, CoinTile } from "@/components/avatar";
+import { HotChip, Sparkline, heatProps } from "@/components/sparkline";
 import { BaseChip, Corners, Empty, Main, PageHeader, Section, Tabs } from "@/components/page";
 import { Rail } from "@/components/rail";
 import { WatchButton } from "@/components/watch-button";
@@ -97,7 +98,7 @@ async function ExploreTab() {
       <Section label="// TRENDING ROOMS" right={<Link href="/rooms" className="mono text-[11px]">ALL ROOMS →</Link>}>
         <div className="grid gap-2.5 px-4 sm:grid-cols-2 sm:px-5">
           {rooms.map((r, i) => (
-            <Link key={r.id} href={`/rooms/${r.slug}`} className="panel flex flex-col gap-2.5 p-3.5 text-text hover:text-text">
+            <Link key={r.id} href={`/rooms/${r.slug}`} {...heatProps(r.heat)} className="panel heat flex flex-col gap-2.5 p-3.5 text-text hover:text-text">
               <span className="flex items-center gap-2.5">
                 <CoinTile symbol={r.coinSymbol ?? r.slug} on={i === 0} />
                 <span className="flex min-w-0 flex-1 flex-col">
@@ -106,8 +107,12 @@ async function ExploreTab() {
                     host @{r.host.handle} · {r.access === "gated" ? "HOLDERS ONLY" : "OPEN"}
                   </span>
                 </span>
-                <span className="mono text-[11px] text-accent">● {r.online}</span>
+                <span className="flex flex-col items-end gap-1">
+                  <span className="mono text-[11px] text-accent">● {r.online}</span>
+                  <HotChip heat={r.heat} />
+                </span>
               </span>
+              <Sparkline values={r.keySpark} width={260} height={26} className="w-full" />
               <span className="mono grid grid-cols-2 gap-1.5 text-[10.5px] tracking-[0.04em] text-muted">
                 <span>
                   KEY VOL 24H<b className="mt-0.5 block text-[13px] text-text">{eth(stats[i].vol24hWei)}</b>

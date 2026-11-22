@@ -4,6 +4,7 @@ import { PostList } from "@/components/post";
 import { BaseChip, Empty, Main, PageHeader } from "@/components/page";
 import { Rail } from "@/components/rail";
 import { CoinTile } from "@/components/avatar";
+import { HotChip, Sparkline, heatProps } from "@/components/sparkline";
 import { getMe } from "@/server/auth";
 import { feed, liveRooms } from "@/server/queries";
 import { sql } from "@insider/core";
@@ -36,14 +37,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
           <section aria-label="Live rooms" className="border-b border-line pb-4 pt-3.5">
             <div className="label px-4 pb-2.5 sm:px-5">// LIVE NOW</div>
             <div className="no-scrollbar flex gap-2.5 overflow-x-auto px-4 sm:px-5">
-              {live.map((r, i) => (
-                <Link key={r.id} href={`/rooms/${r.slug}`} className={`panel flex w-[146px] flex-none flex-col gap-1.5 p-2.5 text-text hover:text-text ${i === 0 && r.online > 0 ? "!border-accent" : ""}`}>
+              {live.map((r) => (
+                <Link key={r.id} href={`/rooms/${r.slug}`} {...heatProps(r.heat)} className={`panel heat flex w-[156px] flex-none flex-col gap-1.5 p-2.5 text-text hover:text-text`}>
                   <span className="flex items-center justify-between">
-                    <CoinTile symbol={r.coinSymbol ?? r.slug} size={30} on={i === 0 && r.online > 0} />
+                    <CoinTile symbol={r.coinSymbol ?? r.slug} size={30} on={r.heat >= 0.35} />
                     <span className="mono text-[10px] text-accent">● {r.online}</span>
                   </span>
                   <b className="truncate text-[13.5px] font-semibold">{r.title}</b>
                   <span className="mono truncate text-[10.5px] text-muted">{r.liveTitle ?? r.topic ?? "open room"}</span>
+                  <span className="flex items-center justify-between gap-2">
+                    <HotChip heat={r.heat} />
+                    <Sparkline values={r.keySpark} width={64} height={18} className="ml-auto" />
+                  </span>
                 </Link>
               ))}
             </div>
