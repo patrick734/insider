@@ -2,7 +2,7 @@
 # Puts the app online on an Ubuntu server that already runs Caddy, Node 22 and pm2 (like the Elypad VPS), with demo
 # data and demo sign-in. Safe to run again: it only creates what's missing, then pulls, builds and restarts.
 #
-#   DOMAIN=insider.18-224-166-132.sslip.io bash deploy/demo-setup.sh
+#   DOMAIN=insider.family ALIASES=www.insider.family bash deploy/demo-setup.sh
 #
 # DOMAIN can be any hostname pointing at this server. *.sslip.io names resolve to the IP inside them, so they work
 # without DNS changes, and Caddy gets an HTTPS certificate for them.
@@ -85,8 +85,19 @@ $DOMAIN {
 	}
 }
 CADDY
-  sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 fi
+# Extra names (e.g. ALIASES=www.insider.family) redirect to DOMAIN.
+for alias in ${ALIASES:-}; do
+  if ! sudo grep -q "^$alias {" /etc/caddy/Caddyfile; then
+    sudo tee -a /etc/caddy/Caddyfile >/dev/null <<CADDY
+
+$alias {
+	redir https://$DOMAIN{uri} permanent
+}
+CADDY
+  fi
+done
+sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 sudo systemctl reload caddy
 
 echo
