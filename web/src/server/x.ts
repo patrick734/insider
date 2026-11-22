@@ -14,19 +14,26 @@ export type XAccount = { id: string; username: string };
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
-export async function xFromPrivyToken(idToken: string): Promise<XAccount | null> {
+export type PrivyLinked = { type: string; subject?: string; username?: string; address?: string; chain_type?: string };
+
+/** The accounts a person linked in Privy, from an identity token Privy signed for this app (null if it doesn't check out). */
+export async function privyLinkedAccounts(idToken: string): Promise<PrivyLinked[] | null> {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
   if (!appId || !idToken) return null;
   jwks ??= createRemoteJWKSet(new URL(`https://auth.privy.io/api/v1/apps/${appId}/jwks.json`));
   try {
     const { payload } = await jwtVerify(idToken, jwks, { issuer: "privy.io", audience: appId });
     const raw = payload.linked_accounts;
-    const accounts = (typeof raw === "string" ? JSON.parse(raw) : raw) as { type: string; subject?: string; username?: string }[];
-    const x = accounts?.find((a) => a.type === "twitter_oauth");
-    return x?.subject && x.username ? { id: x.subject, username: x.username } : null;
+    const accounts = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return Array.isArray(accounts) ? (accounts as PrivyLinked[]) : [];
   } catch {
     return null;
   }
+}
+
+export async function xFromPrivyToken(idToken: string): Promise<XAccount | null> {
+  const x = (await privyLinkedAccounts(idToken))?.find((a) => a.type === "twitter_oauth");
+  return x?.subject && x.username ? { id: x.subject, username: x.username } : null;
 }
 
 export type XCheck = { status: "verified" | "pending" | "failed"; reason?: string; followers?: number; createdAt?: string };

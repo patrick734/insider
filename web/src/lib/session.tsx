@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useIdentityToken, usePrivy, useWallets } from "@privy-io/react-auth";
+import { getIdentityToken, useIdentityToken, usePrivy, useUser, useWallets } from "@privy-io/react-auth";
 import { createPublicClient, createWalletClient, custom, http, type Hash, type WalletClient } from "viem";
 import { chain } from "@insider/core/chain";
 import type { UserLite } from "./types";
@@ -71,11 +71,13 @@ export function DevSessionProvider({ children, initialMe }: { children: React.Re
 
 /**
  * Privy handles login (email, X, Farcaster or a wallet) and creates an embedded or smart wallet when needed. Our own
- * session is a signed message from that wallet, verified on the server (EOA, ERC-1271 and ERC-6492 signatures).
+ * session comes from Privy's identity token (which lists the wallets Privy verified), or failing that a signed message
+ * from the wallet, verified on the server (EOA, ERC-1271 and ERC-6492 signatures).
  */
 export function PrivySessionProvider({ children, initialMe }: { children: React.ReactNode; initialMe: Me | null }) {
   const { ready, authenticated, user, login, logout: privyLogout, linkTwitter } = usePrivy();
   const { identityToken } = useIdentityToken();
+  const { refreshUser } = useUser();
   const { wallets } = useWallets();
   const [me, setMe] = useState<Me | null>(initialMe);
   const active =
@@ -91,31 +93,46 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     return createWalletClient({ account: active.address as `0x${string}`, chain, transport: custom(provider) });
   }, [active, login]);
 
-  // Once Privy has a wallet and we have no session for it, sign the session message.
+  // Once Privy has a wallet and we have no session for it, start one. First with Privy's identity token (no prompt);
+  // if the wallet isn't in the token yet, refresh it once; only then fall back to signing a message.
   useEffect(() => {
     if (!ready || !authenticated || !active) return;
     if (me && me.address === active.address.toLowerCase()) return;
     let stop = false;
+    const viaToken = async () => {
+      const idToken = await getIdentityToken();
+      if (!idToken) return false;
+      const r = await fetch("/api/auth/privy", { method: "POST", body: JSON.stringify({ idToken, address: active.address }) });
+      return r.ok;
+    };
     (async () => {
-      const { nonce } = (await fetch("/api/auth/nonce", { cache: "no-store" }).then((r) => r.json())) as { nonce: string };
-      const message = [
-        `${SITE.domain} wants you to sign in with your wallet.`,
-        ``,
-        `Address: ${active.address.toLowerCase()}`,
-        `Chain: ${chain.id}`,
-        `Nonce: ${nonce}`,
-        `Issued: ${new Date().toISOString()}`,
-      ].join("\n");
-      const w = await wallet();
-      const signature = await w.signMessage({ account: active.address as `0x${string}`, message });
-      if (stop) return;
-      const r = await fetch("/api/auth/session", { method: "POST", body: JSON.stringify({ address: active.address, message, signature }) });
-      if (r.ok) setMe(await fetchMe());
+      let ok = await viaToken().catch(() => false);
+      if (!ok && !stop) {
+        await refreshUser().catch(() => null);
+        ok = await viaToken().catch(() => false);
+      }
+      if (!ok && !stop) {
+        const { nonce } = (await fetch("/api/auth/nonce", { cache: "no-store" }).then((r) => r.json())) as { nonce: string };
+        const message = [
+          `${SITE.domain} wants you to sign in with your wallet.`,
+          ``,
+          `Address: ${active.address.toLowerCase()}`,
+          `Chain: ${chain.id}`,
+          `Nonce: ${nonce}`,
+          `Issued: ${new Date().toISOString()}`,
+        ].join("\n");
+        const w = await wallet();
+        const signature = await w.signMessage({ account: active.address as `0x${string}`, message });
+        if (stop) return;
+        const r = await fetch("/api/auth/session", { method: "POST", body: JSON.stringify({ address: active.address, message, signature }) });
+        ok = r.ok;
+      }
+      if (ok && !stop) setMe(await fetchMe());
     })().catch((e) => console.error("session", e));
     return () => {
       stop = true;
     };
-  }, [ready, authenticated, active, me, wallet]);
+  }, [ready, authenticated, active, me, wallet, refreshUser]);
 
   const refresh = useCallback(async () => setMe(await fetchMe()), []);
   const logout = useCallback(async () => {
