@@ -23,7 +23,7 @@ type Session = {
   /** Run a write, wait for it to land and return the hash. */
   send: (fn: (w: WalletClient) => Promise<Hash>) => Promise<Hash>;
   /** The X account linked to this sign-in (handle), a way to link one, and Privy's identity token proving it. */
-  x: { username: string | null; link: () => void; idToken: string | null };
+  x: { username: string | null; link: () => void; idToken: string | null; getToken: () => Promise<string | null> };
   /** True while a Privy sign-in is being turned into a session; `error` says why the last try failed. */
   signingIn: boolean;
   error: string | null;
@@ -66,7 +66,7 @@ export function DevSessionProvider({ children, initialMe }: { children: React.Re
       wallet: noWallet,
       send: noWallet,
       // Demo: the sample handle stands in for an X account.
-      x: { username: me ? (me.handle ?? `user${me.id}`) : null, link: login, idToken: null },
+      x: { username: me ? (me.handle ?? `user${me.id}`) : null, link: login, idToken: null, getToken: async () => null },
       signingIn: false,
       error: null,
     }),
@@ -201,7 +201,7 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
       refresh,
       wallet,
       send,
-      x: { username: user?.twitter?.username ?? null, link: linkTwitter, idToken: identityToken },
+      x: { username: user?.twitter?.username ?? null, link: linkTwitter, idToken: identityToken, getToken: () => getIdentityToken().catch(() => null) },
       signingIn,
       error,
     }),

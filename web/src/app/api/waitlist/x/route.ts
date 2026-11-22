@@ -16,7 +16,8 @@ export const POST = handle(async (req: Request) => {
   let account: { id: string; username: string } | null;
   if (demoLoginEnabled()) account = { id: `demo:${me.id}`, username: me.handle ?? `user${me.id}` };
   else account = await xFromPrivyToken(idToken ?? "");
-  if (!account) throw new HttpError(400, "Sign in with X first.");
+  if (!account && !idToken) throw new HttpError(400, "Couldn't get a sign-in token from Privy. Check that identity tokens are on in the Privy dashboard.");
+  if (!account) throw new HttpError(400, "Your X account isn't linked to this sign-in. Tap Link X.");
   try {
     await sql()`update users set x_user_id = ${account.id}, x_handle = ${account.username} where id = ${me.id}`;
   } catch (e) {

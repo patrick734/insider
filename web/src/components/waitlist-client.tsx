@@ -44,11 +44,12 @@ export function WaitlistClient({ initial, projectX, siteUrl }: { initial: Me | n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me?.id]);
 
-  // Once Privy has an X account linked, record it.
+  // Once Privy has an X account linked, record it (a fresh identity token proves which X account it is).
+  const recordX = async () => call("/api/waitlist/x", { idToken: PRIVY_APP_ID ? await x.getToken() : null });
   useEffect(() => {
-    if (me && w?.joined && !w.xHandle && x.username && (x.idToken || !PRIVY_APP_ID)) void call("/api/waitlist/x", { idToken: x.idToken });
+    if (me && w?.joined && !w.xHandle && x.username) void recordX();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me?.id, w?.joined, x.username, x.idToken]);
+  }, [me?.id, w?.joined, x.username]);
 
   if (!me)
     return (
@@ -83,9 +84,15 @@ export function WaitlistClient({ initial, projectX, siteUrl }: { initial: Me | n
         </div>
       )}
       {step(!!w?.xHandle, "1", w?.xHandle ? `X linked: @${w.xHandle}` : "Link your X account", w?.xHandle ? <span className="text-sm text-muted">One spot per X account.</span> : (
-        <button disabled={busy} onClick={x.link} className="btn btn-on">
-          LINK X
-        </button>
+        x.username ? (
+          <button disabled={busy} onClick={() => void recordX()} className="btn btn-on">
+            {busy ? "CHECKING…" : `CONFIRM @${x.username}`}
+          </button>
+        ) : (
+          <button disabled={busy} onClick={x.link} className="btn btn-on">
+            LINK X
+          </button>
+        )
       ))}
       {step(w?.followState === "verified", "2", `Follow @${projectX} on X`, w?.followState === "verified" ? <span className="text-sm text-muted">Follow checked. You&apos;re verified.</span> : (
         <div className="flex flex-wrap items-center gap-2">
