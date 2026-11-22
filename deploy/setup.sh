@@ -29,15 +29,19 @@ ask() { # ask VAR "Question" default secret
 
 echo "== Settings (saved in $CONF; edit or delete a line there to change it)"
 ask DOMAIN "Domain" "insider.family"
-ask PRIVY_APP_ID "Privy App ID"
+ask PRIVY_APP_ID "Privy App ID" "cmwrox1vk01mb0hjqixvfsfiy"
 ask X_HANDLE "Project X handle (without @)" "insiderfamily"
 ask ADMIN_ADDRESSES "Admin wallet address(es), comma-separated" "0x05f1d3984f32a9fcb2d019e78764a20bc57da13d"
-ask BASE_RPC_URL "Base RPC URL (Alchemy/QuickNode; kept private)" "" secret
+ask BASE_RPC_URL "Base RPC URL (Alchemy/QuickNode; kept private; Enter to skip for now)" "" secret
 ask X_BEARER_TOKEN "X API bearer token for follow checks (Enter to skip)" "" secret
 ask ZEROX_API_KEY "0x API key for swaps (Enter to skip)" "" secret
 ask BUILDER_CODE "Base Builder Code (Enter to skip)" ""
 [ -n "$PRIVY_APP_ID" ] || { echo "A Privy App ID is required."; exit 1; }
-[ -n "$BASE_RPC_URL" ] || { echo "A Base RPC URL is required (the indexer needs it)."; exit 1; }
+INDEXER=1
+if [ -z "$BASE_RPC_URL" ]; then
+  INDEXER=0
+  echo "No RPC URL yet: the waitlist works, the chain indexer stays off. Run this again later and it will ask for the RPC URL again."
+fi
 
 echo "== Postgres and Redis"
 if ! command -v psql >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq postgresql; fi
@@ -65,7 +69,7 @@ DATABASE_URL=postgres://insider:$DB_PASS@127.0.0.1:5432/$DB_NAME
 REDIS_URL=redis://127.0.0.1:6379/$REDIS_DB
 SESSION_SECRET=$(cat "$SECRET_FILE")
 NEXT_PUBLIC_CHAIN_ID=8453
-RPC_URLS=$BASE_RPC_URL,https://mainnet.base.org
+RPC_URLS=${BASE_RPC_URL:+$BASE_RPC_URL,}https://mainnet.base.org
 NEXT_PUBLIC_RPC_URL=https://mainnet.base.org
 NEXT_PUBLIC_KEYS_ADDRESS=0x8e6Aa3707c2bE2F0472935c6bccB42222E15ADd2
 NEXT_PUBLIC_ROOM_ACCESS_ADDRESS=0x892814990B94Acd528d951571EBE1f3A40E90706
@@ -85,7 +89,7 @@ WEB_PORT=$WEB_PORT
 REALTIME_PORT=$RT_PORT
 UPLOAD_DIR=$HOME/insider-uploads-live
 WAITLIST_MODE=1
-INDEXER=1
+INDEXER=$INDEXER
 ENV
 umask 022
 

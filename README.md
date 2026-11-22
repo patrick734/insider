@@ -113,7 +113,7 @@ sign-in through Privy, waitlist-first mode, the indexer and nightly backups.
 cd ~/insider && git pull && bash deploy/setup.sh
 ```
 
-It asks once for the Privy App ID, the project's X handle, admin wallet addresses, a Base RPC URL, and optionally an X
+It asks once for the Privy App ID, the project's X handle, admin wallet addresses, and optionally a Base RPC URL (needed for the chain indexer; the waitlist runs without it), an X
 API bearer token (follow checks), a 0x API key and a Builder Code, and keeps the answers in `~/.insider-live.env`
 (private; edit or delete a line to change it). Run the same command again after each `git pull` to update.
 
