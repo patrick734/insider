@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getIdentityToken, useCreateWallet, useIdentityToken, usePrivy, useUser, useWallets } from "@privy-io/react-auth";
+import { getAccessToken, getIdentityToken, useCreateWallet, useIdentityToken, usePrivy, useSignMessage, useUser, useWallets } from "@privy-io/react-auth";
 import { createPublicClient, createWalletClient, custom, http, type Hash, type WalletClient } from "viem";
 import { chain } from "@insider/core/chain";
 import type { UserLite } from "./types";
@@ -91,8 +91,10 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const { signMessage: privySign } = useSignMessage();
+  // The wallet Privy made for this person comes first, so the same login is the same account on every device.
   const active =
-    wallets.find((w) => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase()) ?? wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
+    wallets.find((w) => w.walletClientType === "privy") ?? wallets.find((w) => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase()) ?? wallets[0];
 
   const wallet = useCallback(async () => {
     if (!active) {
@@ -146,8 +148,11 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
           `Nonce: ${nonce}`,
           `Issued: ${new Date().toISOString()}`,
         ].join("\n");
-        const w = await wallet();
-        const signature = await w.signMessage({ account: active.address as `0x${string}`, message });
+        // Privy's own wallet signs without a popup; an outside wallet (MetaMask etc.) always shows its own prompt.
+        const signature =
+          active.walletClientType === "privy"
+            ? (await privySign({ message }, { address: active.address, uiOptions: { showWalletUIs: false } })).signature
+            : await (await wallet()).signMessage({ account: active.address as `0x${string}`, message });
         if (stop) return;
         const r = await fetch("/api/auth/session", { method: "POST", body: JSON.stringify({ address: active.address, message, signature }) });
         ok = r.ok;
@@ -166,7 +171,7 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     return () => {
       stop = true;
     };
-  }, [ready, authenticated, active, me, wallet, refreshUser, router, attempt]);
+  }, [ready, authenticated, active, me, wallet, refreshUser, router, attempt, privySign]);
 
   const refresh = useCallback(async () => setMe(await fetchMe()), []);
   const getTokens = useCallback(async () => {
