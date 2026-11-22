@@ -4,6 +4,7 @@ import { PostList } from "@/components/post";
 import { BaseChip, Empty, Main, PageHeader } from "@/components/page";
 import { Rail } from "@/components/rail";
 import { CoinTile } from "@/components/avatar";
+import { Presence } from "@/components/presence";
 import { HotChip, Sparkline, heatProps } from "@/components/sparkline";
 import { getMe } from "@/server/auth";
 import { feed, liveRooms } from "@/server/queries";
@@ -41,7 +42,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                 <Link key={r.id} href={`/rooms/${r.slug}`} {...heatProps(r.heat)} className={`panel heat flex w-[156px] flex-none flex-col gap-1.5 p-2.5 text-text hover:text-text`}>
                   <span className="flex items-center justify-between">
                     <CoinTile symbol={r.coinSymbol ?? r.slug} size={30} on={r.heat >= 0.35} />
-                    <span className="mono text-[10px] text-accent">● {r.online}</span>
+                    <Presence room={r} className="text-[10px]" />
                   </span>
                   <b className="truncate text-[13.5px] font-semibold">{r.title}</b>
                   <span className="mono truncate text-[10.5px] text-muted">{r.liveTitle ?? r.topic ?? "open room"}</span>

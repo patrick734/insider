@@ -5,6 +5,7 @@ import { CoinTile } from "./avatar";
 import { HotChip, Sparkline } from "./sparkline";
 import { Corners } from "./page";
 import { Icon } from "./icons";
+import { Presence } from "./presence";
 
 const KIND_COLOR: Record<string, string> = { BUY: "text-accent", SELL: "text-text", KEY: "text-accent-soft", JOIN: "text-muted" };
 
@@ -45,10 +46,7 @@ export async function Rail() {
               <span className="mono truncate text-[11px] text-muted">{r.isLive ? (r.liveTitle ?? "live now") : (r.topic ?? (r.access === "gated" ? "holders only" : "open room"))}</span>
             </span>
             <Sparkline values={r.keySpark} width={44} height={18} />
-            <span className="mono flex flex-col items-end gap-0.5 text-[11px]">
-              <b className="font-semibold text-text">{r.online}</b>
-              <span className="text-dim">ONLINE</span>
-            </span>
+            <Presence room={r} className="text-[11px]" />
           </Link>
         ))}
       </section>

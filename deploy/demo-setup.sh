@@ -59,7 +59,7 @@ echo "== Install, migrate, sample data, build"
 cd "$APP"
 npm ci --no-audit --no-fund
 set -a; . "$APP/web/.env.local"; set +a
-(cd packages/core && npx tsx src/scripts/migrate.ts && npx tsx src/scripts/seed.ts)
+(cd packages/core && npx tsx src/scripts/migrate.ts && npx tsx src/scripts/seed.ts && npx tsx src/scripts/seed-members.ts)
 (cd web && npm run build)
 
 echo "== Start with pm2"

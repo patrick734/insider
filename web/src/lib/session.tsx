@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useIdentityToken, usePrivy, useWallets } from "@privy-io/react-auth";
 import { createPublicClient, createWalletClient, custom, http, type Hash, type WalletClient } from "viem";
 import { chain } from "@insider/core/chain";
 import type { UserLite } from "./types";
@@ -21,6 +21,8 @@ type Session = {
   wallet: () => Promise<WalletClient>;
   /** Run a write, wait for it to land and return the hash. */
   send: (fn: (w: WalletClient) => Promise<Hash>) => Promise<Hash>;
+  /** The X account linked to this sign-in (handle), a way to link one, and Privy's identity token proving it. */
+  x: { username: string | null; link: () => void; idToken: string | null };
 };
 
 const Ctx = createContext<Session | null>(null);
@@ -50,7 +52,18 @@ export function DevSessionProvider({ children, initialMe }: { children: React.Re
     throw new Error("Wallet sign-in isn't configured (set NEXT_PUBLIC_PRIVY_APP_ID).");
   }, []);
   const value = useMemo<Session>(
-    () => ({ ready: true, me, address: (me?.address as `0x${string}`) ?? null, login, logout, refresh, wallet: noWallet, send: noWallet }),
+    () => ({
+      ready: true,
+      me,
+      address: (me?.address as `0x${string}`) ?? null,
+      login,
+      logout,
+      refresh,
+      wallet: noWallet,
+      send: noWallet,
+      // Demo: the sample handle stands in for an X account.
+      x: { username: me ? (me.handle ?? `user${me.id}`) : null, link: login, idToken: null },
+    }),
     [me, login, logout, refresh, noWallet],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -61,7 +74,8 @@ export function DevSessionProvider({ children, initialMe }: { children: React.Re
  * session is a signed message from that wallet, verified on the server (EOA, ERC-1271 and ERC-6492 signatures).
  */
 export function PrivySessionProvider({ children, initialMe }: { children: React.ReactNode; initialMe: Me | null }) {
-  const { ready, authenticated, user, login, logout: privyLogout } = usePrivy();
+  const { ready, authenticated, user, login, logout: privyLogout, linkTwitter } = usePrivy();
+  const { identityToken } = useIdentityToken();
   const { wallets } = useWallets();
   const [me, setMe] = useState<Me | null>(initialMe);
   const active =
@@ -123,8 +137,18 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
   );
 
   const value = useMemo<Session>(
-    () => ({ ready, me, address: (me?.address as `0x${string}`) ?? null, login, logout, refresh, wallet, send }),
-    [ready, me, login, logout, refresh, wallet, send],
+    () => ({
+      ready,
+      me,
+      address: (me?.address as `0x${string}`) ?? null,
+      login,
+      logout,
+      refresh,
+      wallet,
+      send,
+      x: { username: user?.twitter?.username ?? null, link: linkTwitter, idToken: identityToken },
+    }),
+    [ready, me, login, logout, refresh, wallet, send, user?.twitter?.username, linkTwitter, identityToken],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

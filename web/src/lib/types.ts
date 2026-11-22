@@ -41,6 +41,10 @@ export type RoomLite = {
   msgs10m: number;
   /** Key price (ETH) after each of the last trades, oldest first. */
   keySpark: number[];
+  /** Members of the room (people who joined). */
+  members: number;
+  /** When the last message was sent, if any. */
+  lastActiveAt: string | null;
 };
 
 export type Post = {

@@ -20,7 +20,7 @@ const ROOM_SELECT = () => db()`
   ${PNL_JOIN()}
   left join coins c on c.address = r.coin_address`;
 
-type RoomActivity = { msgs: number; trades: number; supplies: number[] };
+type RoomActivity = { msgs: number; trades: number; supplies: number[]; members: number; lastAt: string | null };
 
 /** Heat: people online, chat in the last 10 minutes, key trades in the last hour, plus a bump while live. */
 function heatOf(online: number, a: RoomActivity | undefined, isLive: boolean): number {
@@ -45,6 +45,8 @@ function toRoom(r: Record<string, unknown>, online: Record<string, number>, a?: 
     heat: heatOf(online[id] ?? 0, a, Boolean(r.is_live)),
     msgs10m: a?.msgs ?? 0,
     keySpark: (a?.supplies ?? []).map((s) => Number(priceAt(BigInt(s))) / 1e18),
+    members: a?.members ?? 0,
+    lastActiveAt: a?.lastAt ?? null,
   };
 }
 
@@ -58,11 +60,13 @@ async function withOnline(rows: Record<string, unknown>[]): Promise<RoomLite[]> 
             (select count(*) from messages m where m.room_id = r.id and m.created_at > now() - interval '10 minutes')::int as msgs,
             (select count(*) from key_trades kt where kt.subject = h.address and kt.block_time > now() - interval '1 hour')::int as trades,
             (select coalesce(array_agg(s.supply order by s.block_number), '{}')
-               from (select supply, block_number from key_trades kt where kt.subject = h.address order by block_number desc limit 24) s) as supplies
+               from (select supply, block_number from key_trades kt where kt.subject = h.address order by block_number desc limit 24) s) as supplies,
+            (select count(*) from room_members rm where rm.room_id = r.id and not rm.banned)::int as members,
+            (select max(m.created_at) from messages m where m.room_id = r.id and m.deleted_at is null) as last_at
           from rooms r join users h on h.id = r.host_id where r.id in ${db()(ids)}`
       : Promise.resolve([]),
   ]);
-  const byId = new Map(act.map((a) => [String(a.id), { msgs: Number(a.msgs), trades: Number(a.trades), supplies: (a.supplies as number[]) ?? [] }]));
+  const byId = new Map(act.map((a) => [String(a.id), { msgs: Number(a.msgs), trades: Number(a.trades), supplies: (a.supplies as number[]) ?? [], members: Number(a.members), lastAt: a.last_at ? iso(a.last_at) : null }]));
   return rows.map((r) => toRoom(r, online, byId.get(String(r.id))));
 }
 
@@ -150,7 +154,7 @@ export async function postsByUser(userId: string, viewerId: string | null, kind:
     from posts po join users u on u.id = po.user_id ${PNL_JOIN()} left join rooms ro on ro.id = po.room_id
     where po.user_id = ${userId} and po.deleted_at is null and po.reply_to_id is null
       ${kind === "calls" ? db()`and po.trade is not null` : db()``}
-    order by po.is_pinned desc, po.id desc limit 30`;
+    order by po.is_pinned desc, po.created_at desc, po.id desc limit 30`;
   return toPosts(rows);
 }
 

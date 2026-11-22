@@ -9,6 +9,7 @@ import { getMe } from "@/server/auth";
 import { unreadCounts } from "@/server/queries";
 import { SITE } from "@/lib/config";
 import { demoLoginEnabled } from "@/server/demo";
+import { foundersLeft } from "@/server/waitlist";
 
 const grotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-grotesk" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-jetbrains" });
@@ -25,6 +26,7 @@ export const viewport: Viewport = { themeColor: "#000000", width: "device-width"
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const me = await getMe().catch(() => null);
   const counts = me ? await unreadCounts(me.id).catch(() => ({ notifications: 0, messages: 0 })) : { notifications: 0, messages: 0 };
+  const left = await foundersLeft().catch(() => 200);
   return (
     <html lang="en" className={`${grotesk.variable} ${jetbrains.variable}`}>
       <body>
@@ -34,10 +36,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           )}
           <RefCapture />
           <OnboardingGate />
-          <MobileChrome counts={counts} />
+          <MobileChrome counts={counts} foundersLeft={left} />
           <div className="mx-auto flex w-full max-w-[1320px] items-start">
             <div className="hidden flex-none border-r border-accent/18 bg-black/55 lg:block">
-              <SideNav counts={counts} />
+              <SideNav counts={counts} foundersLeft={left} />
             </div>
             {children}
           </div>

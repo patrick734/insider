@@ -17,6 +17,7 @@ import { Avatar, CoinTile } from "./avatar";
 import { Corners } from "./page";
 import { Icon } from "./icons";
 import { PostList } from "./post";
+import { presenceText } from "./presence";
 
 type Holder = { address: string; balance: number; handle: string | null; name: string | null };
 type Trade = { txHash: string; side: "buy" | "sell"; amount: number; ethWei: string; at: string; who: string };
@@ -175,7 +176,7 @@ export function RoomClient(props: {
         <span className="flex min-w-0 flex-1 flex-col">
           <b className="truncate text-base">{room.title}</b>
           <span className="mono truncate text-[10px] tracking-[0.1em] text-accent">
-            ● {online} ONLINE · <span className="text-muted">{room.access === "gated" ? "HOLDERS ONLY" : "OPEN"}</span>
+            {online > 0 ? `● ${online} ONLINE` : <span className="text-muted">{presenceText({ ...room, online }).text.toUpperCase()}</span>} · <span className="text-muted">{room.access === "gated" ? "HOLDERS ONLY" : "OPEN"}</span>
             {connected ? "" : access.ok && me ? <span className="text-dim"> · CONNECTING…</span> : ""}
           </span>
         </span>

@@ -60,6 +60,8 @@ export function ProfileActions({ profile: p, isMe }: { profile: Profile; isMe: b
     heat: 0,
     msgs10m: 0,
     keySpark: [],
+    members: 0,
+    lastActiveAt: null,
   };
 
   return (
@@ -74,9 +76,17 @@ export function ProfileActions({ profile: p, isMe }: { profile: Profile; isMe: b
         <button onClick={() => void follow()} className={`btn px-2.5 sm:px-3.5 ${following ? "btn-off" : "btn-off border-accent"}`}>
           {following ? "FOLLOWING" : "FOLLOW"}
         </button>
-        <button onClick={() => (me ? setSheet(true) : login())} className="btn btn-on">
-          {p.keySupply > 0 ? `BUY KEY · ${eth(priceAt(BigInt(p.keySupply)))}` : "KEYS"}
-        </button>
+        <span className="flex items-center gap-2.5">
+          <button onClick={() => (me ? setSheet(true) : login())} className="btn btn-on h-11 px-5 text-[12.5px] shadow-[0_0_30px_rgba(46,168,255,0.7)]">
+            {p.keySupply > 0 ? `BUY KEY · ${eth(priceAt(BigInt(p.keySupply)))}` : "KEYS"}
+          </button>
+          {p.keyHolders > 0 && (
+            <span className="mono flex flex-col leading-tight">
+              <b className="text-sm text-text">{p.keyHolders}</b>
+              <span className="text-[9.5px] tracking-[0.12em] text-muted">HOLDERS</span>
+            </span>
+          )}
+        </span>
       </span>
       {sheet && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">

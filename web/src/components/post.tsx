@@ -9,6 +9,7 @@ import { txError, useSession } from "@/lib/session";
 import { builderSuffix } from "@/lib/builder-code";
 import { Avatar } from "./avatar";
 import { Icon } from "./icons";
+import { presenceText } from "./presence";
 
 export function PostList({ posts, compactCards = false }: { posts: Post[]; compactCards?: boolean }) {
   return (
@@ -148,7 +149,7 @@ export function PostCard({ post, compactCards = false }: { post: Post; compactCa
                 {post.live.title} · {post.live.liveTitle ?? "live now"}
               </b>
               <span className="mono text-[10.5px] text-muted">
-                {post.live.online} ONLINE · {post.live.access === "gated" ? "HOLDERS ONLY" : "OPEN"}
+                {presenceText(post.live).text.toUpperCase()} · {post.live.access === "gated" ? "HOLDERS ONLY" : "OPEN"}
               </span>
             </span>
             <span className="btn btn-on h-[30px] px-3">JOIN</span>

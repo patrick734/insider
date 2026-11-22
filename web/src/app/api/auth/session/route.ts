@@ -29,8 +29,8 @@ export const POST = handle(async (req: Request) => {
   // A brand-new account that arrived through an invite link: credit the inviter.
   const ref = (await cookies()).get("insider_ref")?.value;
   if (u.created && ref && /^[a-z0-9]{6,12}$/.test(ref)) {
-    const [inv] = await sql()`update invites set uses = uses + 1 where code = ${ref} returning inviter_id`;
-    if (inv && String(inv.inviter_id) !== String(u.id)) await sql()`update users set invited_by = ${inv.inviter_id} where id = ${u.id}`;
+    const [inv] = await sql()`select user_id from referral_codes where code = ${ref} and active`;
+    if (inv && String(inv.user_id) !== String(u.id)) await sql()`update users set invited_by = ${inv.user_id} where id = ${u.id}`;
   }
   await setSessionCookie(String(u.id), addr);
   return NextResponse.json({ ok: true });

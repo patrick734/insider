@@ -10,7 +10,9 @@ export function OnboardingGate() {
   const path = usePathname();
   const router = useRouter();
   useEffect(() => {
-    if (me && !me.handle && !path.startsWith("/welcome") && !path.startsWith("/api")) router.replace("/welcome");
+    // The waitlist works without a handle (X is the identity there).
+    const exempt = ["/welcome", "/waitlist", "/s/", "/api"].some((p) => path.startsWith(p));
+    if (me && !me.handle && !exempt) router.replace("/welcome");
   }, [me, path, router]);
   return null;
 }

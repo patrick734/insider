@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Avatar, CoinTile } from "@/components/avatar";
+import { Presence } from "@/components/presence";
 import { HotChip, Sparkline, heatProps } from "@/components/sparkline";
 import { BaseChip, Corners, Empty, Main, PageHeader, Section, Tabs } from "@/components/page";
 import { Rail } from "@/components/rail";
@@ -108,7 +109,7 @@ async function ExploreTab() {
                   </span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
-                  <span className="mono text-[11px] text-accent">● {r.online}</span>
+                  <Presence room={r} className="text-[11px]" />
                   <HotChip heat={r.heat} />
                 </span>
               </span>
@@ -173,7 +174,7 @@ async function TokensTab() {
               <WatchButton coin={c.address} watching={watching.has(c.address)} />
               {c.room ? (
                 <Link href={`/rooms/${c.room.slug}`} className="btn btn-off h-[30px] px-3 text-[10px]">
-                  ROOM · {c.room.online}
+                  {c.room.online > 0 ? `ROOM · ${c.room.online} ONLINE` : "ROOM"}
                 </Link>
               ) : (
                 <span className="mono text-[10.5px] text-dim">NO ROOM</span>

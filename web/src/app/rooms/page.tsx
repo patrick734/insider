@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CoinTile } from "@/components/avatar";
+import { Presence } from "@/components/presence";
 import { HotChip, Sparkline } from "@/components/sparkline";
 import { Empty, Main, PageHeader } from "@/components/page";
 import { Rail } from "@/components/rail";
@@ -60,7 +61,7 @@ export default async function Rooms({ searchParams }: { searchParams: Promise<{ 
                 </span>
                 <Sparkline values={r.keySpark} className="hidden sm:block" />
                 <span className="mono flex flex-col items-end text-[11px]">
-                  <b className="text-accent">● {r.online}</b>
+                  <Presence room={r} />
                   <span className="text-dim">{r.access === "gated" ? "HOLDERS" : "OPEN"}</span>
                 </span>
               </Link>

@@ -2,13 +2,15 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Avatar, CoinTile } from "@/components/avatar";
+import { Presence } from "@/components/presence";
 import { Corners, Empty, Main, Tabs } from "@/components/page";
 import { Rail } from "@/components/rail";
 import { PostList } from "@/components/post";
 import { ProfileActions } from "@/components/profile-actions";
 import { getMe } from "@/server/auth";
 import { postsByUser, profile } from "@/server/queries";
-import { compact, displayName, eth, shortAddr } from "@/lib/format";
+import { ago, compact, displayName, eth, pct, shortAddr, usd } from "@/lib/format";
+import type { Post } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -75,18 +77,22 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
             )}
           </span>
           {p.bio && <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-body">{p.bio}</p>}
-          <div className="mono mt-3 flex flex-wrap gap-x-[18px] gap-y-1 text-xs text-muted">
-            <span>
-              <b className="text-text">{compact(p.following)}</b> Following
+          {/* Key holders lead: they're the people paying to be in this person's room. */}
+          <div className="mt-3.5 flex flex-wrap items-end gap-x-6 gap-y-2">
+            <span className="flex items-baseline gap-2">
+              <b className="mono glow text-[28px] leading-none text-accent">{compact(p.keyHolders)}</b>
+              <span className="mono text-[11px] tracking-[0.12em] text-accent-soft">KEY HOLDERS</span>
             </span>
-            <span>
-              <b className="text-text">{compact(p.followers)}</b> Followers
-            </span>
-            <span>
-              <b className="text-text">{p.keyHolders}</b> Key holders
-            </span>
-            <span>
-              <b className="text-text">{p.rooms.length}</b> Rooms
+            <span className="mono flex flex-wrap gap-x-[18px] gap-y-1 pb-0.5 text-xs text-muted">
+              <span>
+                <b className="text-text">{compact(p.followers)}</b> Followers
+              </span>
+              <span>
+                <b className="text-text">{compact(p.following)}</b> Following
+              </span>
+              <span>
+                <b className="text-text">{p.rooms.length}</b> Rooms
+              </span>
             </span>
           </div>
           {p.pnl && (
@@ -124,7 +130,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
                     <b>{r.title}</b>
                     <span className="mono text-[11px] text-muted">{r.access === "gated" ? "HOLDERS ONLY" : "OPEN"}</span>
                   </span>
-                  <span className="mono text-[11px] text-accent">● {r.online}</span>
+                  <Presence room={r} className="text-[11px]" />
                 </Link>
               ))}
             </div>
@@ -132,12 +138,63 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
             <Empty title="// NO ROOMS YET" />
           )
         ) : posts.length ? (
-          <PostList posts={posts} />
+          <>
+            {tab === "calls" && <Receipts posts={posts} />}
+            <PostList posts={posts} />
+          </>
         ) : (
           <Empty title={tab === "calls" ? "// NO CALLS YET" : "// NO POSTS YET"} />
         )}
       </Main>
       <Rail />
     </>
+  );
+}
+
+/** Every call at a glance: entry, now, change since the call. Verified PnL in table form. */
+function Receipts({ posts }: { posts: Post[] }) {
+  const calls = posts.filter((p) => p.trade);
+  if (!calls.length) return null;
+  const changes = calls.map((c) => c.trade!.changePct).filter((x): x is number => x !== null);
+  const avg = changes.length ? changes.reduce((a, b) => a + b, 0) / changes.length : null;
+  const hits = changes.filter((x) => x > 0).length;
+  return (
+    <section className="border-b border-line px-4 py-4 sm:px-5">
+      <div className="flex items-baseline justify-between">
+        <span className="label">// RECEIPTS</span>
+        <span className="mono text-[11px] text-muted">
+          {hits}/{changes.length} IN PROFIT{avg !== null ? ` · AVG ${pct(avg)}` : ""}
+        </span>
+      </div>
+      <div className="panel mt-2.5 overflow-x-auto">
+        <table className="mono w-full text-[12px]">
+          <thead>
+            <tr className="text-left text-[10px] tracking-[0.12em] text-dim">
+              <th className="px-3 py-2 font-normal">CALL</th>
+              <th className="px-3 py-2 font-normal">ENTRY MC</th>
+              <th className="px-3 py-2 font-normal">NOW</th>
+              <th className="px-3 py-2 text-right font-normal">SINCE CALL</th>
+              <th className="px-3 py-2 text-right font-normal">WHEN</th>
+            </tr>
+          </thead>
+          <tbody>
+            {calls.map((c) => {
+              const t = c.trade!;
+              return (
+                <tr key={c.id} className="border-t border-accent/8">
+                  <td className="px-3 py-2.5">
+                    <span className={t.side === "sell" ? "text-[#ff8cc3]" : "text-accent"}>{t.side === "sell" ? "SOLD" : "BOUGHT"}</span> <b className="text-text">${t.symbol}</b>
+                  </td>
+                  <td className="px-3 py-2.5 text-soft">{usd(t.mcUsd)}</td>
+                  <td className="px-3 py-2.5 text-soft">{t.nowMcUsd ? usd(t.nowMcUsd) : "—"}</td>
+                  <td className={`px-3 py-2.5 text-right font-bold ${t.changePct !== null && t.changePct < 0 ? "text-[#ff6fb4]" : "glow text-accent"}`}>{pct(t.changePct)}</td>
+                  <td className="px-3 py-2.5 text-right text-dim">{ago(c.createdAt)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

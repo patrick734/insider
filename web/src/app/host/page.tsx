@@ -8,6 +8,7 @@ import { roomsOfHost } from "@/server/queries";
 import { SITE } from "@/lib/config";
 import { sql } from "@insider/core";
 import { CoinTile } from "@/components/avatar";
+import { Presence } from "@/components/presence";
 import { eth } from "@/lib/format";
 import type { RoomLite } from "@/lib/types";
 
@@ -92,7 +93,7 @@ async function Dashboard({ hostAddress, rooms }: { hostAddress: string; rooms: R
                   {stats[i].members} members · {stats[i].msgs} messages this week · {r.access === "gated" ? "holders only" : "open"}
                 </span>
               </span>
-              <span className="mono text-[11px] text-accent">● {r.online}</span>
+              <Presence room={r} className="text-[11px]" />
             </Link>
           ))}
         </div>

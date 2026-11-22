@@ -27,7 +27,7 @@ export const MORE: { href: string; label: string; icon: IconName; tag?: string }
   { href: "/watchlist", label: "Watchlist", icon: "star" },
   { href: "/wallet?tab=keys", label: "Keys portfolio", icon: "key" },
   { href: "/explore?tab=users", label: "Leaderboard", icon: "board" },
-  { href: "/invite", label: "Invite & earn", icon: "plus", tag: "FEE SHARE" },
+  { href: "/waitlist", label: "Invite & earn", icon: "plus", tag: "FOUNDERS" },
   { href: "/fees", label: "Fee discounts", icon: "discount" },
   { href: "/launch", label: "Launch a coin", icon: "rocket", tag: "LATER" },
   { href: "/settings", label: "Settings", icon: "settings" },
@@ -49,7 +49,7 @@ export function useCounts(initial: Counts): Counts {
 }
 
 /** Desktop left menu. */
-export function SideNav({ counts: initial }: { counts: Counts }) {
+export function SideNav({ counts: initial, foundersLeft }: { counts: Counts; foundersLeft: number }) {
   const path = usePathname();
   const { me, login } = useSession();
   const counts = useCounts(initial);
@@ -110,9 +110,7 @@ export function SideNav({ counts: initial }: { counts: Counts }) {
             </span>
           </Link>
         ) : (
-          <button onClick={login} className="btn btn-off w-full">
-            SIGN IN
-          </button>
+          <JoinWaitlist left={foundersLeft} />
         )}
       </div>
     </nav>
@@ -120,7 +118,7 @@ export function SideNav({ counts: initial }: { counts: Counts }) {
 }
 
 /** Mobile: top bar (avatar opens the drawer, balance opens the wallet), bottom tabs and the drawer. */
-export function MobileChrome({ counts: initial }: { counts: Counts }) {
+export function MobileChrome({ counts: initial, foundersLeft }: { counts: Counts; foundersLeft: number }) {
   const path = usePathname();
   const { me, login, logout } = useSession();
   const balanceWei = useBalance();
@@ -161,9 +159,9 @@ export function MobileChrome({ counts: initial }: { counts: Counts }) {
               {balanceWei ? eth(balanceWei) : "WALLET"}
             </Link>
           ) : (
-            <button onClick={login} className="btn btn-on h-[30px] px-3 text-[10px]">
-              SIGN IN
-            </button>
+            <Link href="/waitlist" className="btn btn-on h-[30px] px-3 text-[10px]">
+              JOIN · {foundersLeft} LEFT
+            </Link>
           )}
         </header>
       )}
@@ -196,9 +194,7 @@ export function MobileChrome({ counts: initial }: { counts: Counts }) {
                   <span className="mono text-[11px] text-muted">@{me.handle ?? "set-a-handle"}</span>
                 </>
               ) : (
-                <button onClick={login} className="btn btn-on w-full">
-                  SIGN IN
-                </button>
+                <JoinWaitlist left={foundersLeft} />
               )}
             </div>
             {me && (
@@ -259,4 +255,22 @@ export function useBalance(): string | null {
     return () => clearInterval(t);
   }, [address]);
   return b;
+}
+
+/** Signed-out call to action: the founder waitlist, with how many founder spots are left. */
+function JoinWaitlist({ left }: { left: number }) {
+  const { login } = useSession();
+  return (
+    <div className="w-full">
+      <Link href="/waitlist" className="btn btn-on h-11 w-full shadow-[0_0_24px_rgba(46,168,255,0.55)]">
+        JOIN WAITLIST
+      </Link>
+      <span className="mono mt-1.5 flex justify-between text-[10px] tracking-[0.1em] text-muted">
+        <span>{left} FOUNDER SPOTS LEFT</span>
+        <button onClick={login} className="text-accent">
+          SIGN IN
+        </button>
+      </span>
+    </div>
+  );
 }
