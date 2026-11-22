@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/session";
+import { PRIVY_APP_ID } from "@/lib/config";
 import { Corners } from "./page";
 import { CopyButton } from "./copy-button";
 
@@ -19,7 +20,7 @@ type Me = {
 
 /** Your waitlist status: the three steps, then your link, rank and invites. */
 export function WaitlistClient({ initial, projectX, siteUrl }: { initial: Me | null; projectX: string; siteUrl: string }) {
-  const { me, login, x } = useSession();
+  const { me, login, x, signingIn, error } = useSession();
   const router = useRouter();
   const [w, setW] = useState<Me | null>(initial);
   const [busy, setBusy] = useState(false);
@@ -39,23 +40,23 @@ export function WaitlistClient({ initial, projectX, siteUrl }: { initial: Me | n
 
   // Signed in but not on the list yet: join straight away (this is what credits your inviter's link).
   useEffect(() => {
-    if (me && w && !w.joined) void call("/api/waitlist/join");
+    if (me && !w?.joined) void call("/api/waitlist/join");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me?.id]);
 
   // Once Privy has an X account linked, record it.
   useEffect(() => {
-    if (me && w?.joined && !w.xHandle && x.username) void call("/api/waitlist/x", { idToken: x.idToken });
+    if (me && w?.joined && !w.xHandle && x.username && (x.idToken || !PRIVY_APP_ID)) void call("/api/waitlist/x", { idToken: x.idToken });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me?.id, w?.joined, x.username]);
+  }, [me?.id, w?.joined, x.username, x.idToken]);
 
   if (!me)
     return (
       <div className="border-b border-line px-4 py-6 sm:px-6">
-        <button onClick={login} className="btn btn-on h-12 px-6 text-[13px] shadow-[0_0_30px_rgba(46,168,255,0.6)]">
-          JOIN WITH X
+        <button onClick={login} disabled={signingIn} className="btn btn-on h-12 px-6 text-[13px] shadow-[0_0_30px_rgba(46,168,255,0.6)]">
+          {signingIn ? "SIGNING YOU IN…" : error ? "TRY AGAIN" : "JOIN WITH X"}
         </button>
-        <p className="mono mt-3 text-[11px] text-dim">Sign in with X. Your wallet can come later.</p>
+        <p className={`mono mt-3 text-[11px] ${error ? "text-accent-soft" : "text-dim"}`}>{error ?? "Sign in with X. Your wallet can come later."}</p>
       </div>
     );
 

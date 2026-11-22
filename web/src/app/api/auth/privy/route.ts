@@ -17,8 +17,10 @@ export const POST = handle(async (req: Request) => {
   const addr = address.toLowerCase();
   if (!(await rateLimit(`auth:${addr}`, 10, 60))) throw new HttpError(429, "Too many tries. Wait a minute.");
   const accounts = await privyLinkedAccounts(idToken);
+  if (!accounts) console.warn("[auth/privy] identity token did not verify (check the Privy App ID and that identity tokens are on)");
   if (!accounts) throw new HttpError(401, "That sign-in didn't check out. Try again.");
   const linked = accounts.some((a) => a.type === "wallet" && a.chain_type !== "solana" && a.address?.toLowerCase() === addr);
+  if (!linked) console.warn(`[auth/privy] wallet not in identity token; linked types: ${accounts.map((a) => a.type).join(",") || "none"}`);
   if (!linked) throw new HttpError(409, "Wallet not linked yet.");
   await startSession(addr);
   return NextResponse.json({ ok: true });

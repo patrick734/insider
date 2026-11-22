@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { getIdentityToken, useIdentityToken, usePrivy, useUser, useWallets } from "@privy-io/react-auth";
+import { useRouter } from "next/navigation";
+import { getIdentityToken, useCreateWallet, useIdentityToken, usePrivy, useUser, useWallets } from "@privy-io/react-auth";
 import { createPublicClient, createWalletClient, custom, http, type Hash, type WalletClient } from "viem";
 import { chain } from "@insider/core/chain";
 import type { UserLite } from "./types";
@@ -23,6 +24,9 @@ type Session = {
   send: (fn: (w: WalletClient) => Promise<Hash>) => Promise<Hash>;
   /** The X account linked to this sign-in (handle), a way to link one, and Privy's identity token proving it. */
   x: { username: string | null; link: () => void; idToken: string | null };
+  /** True while a Privy sign-in is being turned into a session; `error` says why the last try failed. */
+  signingIn: boolean;
+  error: string | null;
 };
 
 const Ctx = createContext<Session | null>(null);
@@ -63,6 +67,8 @@ export function DevSessionProvider({ children, initialMe }: { children: React.Re
       send: noWallet,
       // Demo: the sample handle stands in for an X account.
       x: { username: me ? (me.handle ?? `user${me.id}`) : null, link: login, idToken: null },
+      signingIn: false,
+      error: null,
     }),
     [me, login, logout, refresh, noWallet],
   );
@@ -78,8 +84,13 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
   const { ready, authenticated, user, login, logout: privyLogout, linkTwitter } = usePrivy();
   const { identityToken } = useIdentityToken();
   const { refreshUser } = useUser();
-  const { wallets } = useWallets();
+  const { wallets, ready: walletsReady } = useWallets();
+  const { createWallet } = useCreateWallet();
+  const router = useRouter();
   const [me, setMe] = useState<Me | null>(initialMe);
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const active =
     wallets.find((w) => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase()) ?? wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
 
@@ -93,12 +104,25 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     return createWalletClient({ account: active.address as `0x${string}`, chain, transport: custom(provider) });
   }, [active, login]);
 
+  // Signed in with X (or email) but Privy made no wallet: make one, since the session hangs off a wallet address.
+  useEffect(() => {
+    if (!ready || !authenticated || !walletsReady || wallets.length > 0 || user?.wallet) return;
+    setSigningIn(true);
+    createWallet().catch((e: unknown) => {
+      console.error("create wallet", e);
+      setSigningIn(false);
+      setError("Couldn't set up your wallet. Try again.");
+    });
+  }, [ready, authenticated, walletsReady, wallets.length, user?.wallet, createWallet, attempt]);
+
   // Once Privy has a wallet and we have no session for it, start one. First with Privy's identity token (no prompt);
   // if the wallet isn't in the token yet, refresh it once; only then fall back to signing a message.
   useEffect(() => {
     if (!ready || !authenticated || !active) return;
     if (me && me.address === active.address.toLowerCase()) return;
     let stop = false;
+    setSigningIn(true);
+    setError(null);
     const viaToken = async () => {
       const idToken = await getIdentityToken();
       if (!idToken) return false;
@@ -127,14 +151,28 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
         const r = await fetch("/api/auth/session", { method: "POST", body: JSON.stringify({ address: active.address, message, signature }) });
         ok = r.ok;
       }
-      if (ok && !stop) setMe(await fetchMe());
-    })().catch((e) => console.error("session", e));
+      if (stop) return;
+      if (!ok) throw new Error("The server didn't accept the sign-in.");
+      setMe(await fetchMe());
+      setSigningIn(false);
+      router.refresh();
+    })().catch((e: unknown) => {
+      console.error("session", e);
+      if (stop) return;
+      setSigningIn(false);
+      setError(e instanceof Error && /reject|denied|cancel/i.test(e.message) ? "Sign-in was cancelled." : "Sign-in didn't finish. Try again.");
+    });
     return () => {
       stop = true;
     };
-  }, [ready, authenticated, active, me, wallet, refreshUser]);
+  }, [ready, authenticated, active, me, wallet, refreshUser, router, attempt]);
 
   const refresh = useCallback(async () => setMe(await fetchMe()), []);
+  // Already signed in to Privy but no session yet (or the last try failed): try again instead of opening Privy.
+  const signIn = useCallback(() => {
+    if (authenticated) setAttempt((a) => a + 1);
+    else login();
+  }, [authenticated, login]);
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     await privyLogout();
@@ -158,14 +196,16 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
       ready,
       me,
       address: (me?.address as `0x${string}`) ?? null,
-      login,
+      login: signIn,
       logout,
       refresh,
       wallet,
       send,
       x: { username: user?.twitter?.username ?? null, link: linkTwitter, idToken: identityToken },
+      signingIn,
+      error,
     }),
-    [ready, me, login, logout, refresh, wallet, send, user?.twitter?.username, linkTwitter, identityToken],
+    [ready, me, signIn, logout, refresh, wallet, send, user?.twitter?.username, linkTwitter, identityToken, signingIn, error],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
