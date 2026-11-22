@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Corners, Main, PageHeader } from "@/components/page";
+import { Main, PageHeader } from "@/components/page";
+import { LegalDoc, type Clause } from "@/components/legal";
 import { Rail } from "@/components/rail";
 import { SITE } from "@/lib/config";
 import { ADDRESSES, CHAIN_ID } from "@insider/core";
@@ -17,9 +18,6 @@ const CONTRACTS = (
     ["SplitterFactory", ADDRESSES.splitterFactory],
   ] as const
 ).filter(([, a]) => a);
-
-type Block = string | string[];
-type Clause = { id: string; title: string; body: Block[] };
 
 function clauses(): Clause[] {
   const n = SITE.name;
@@ -82,7 +80,7 @@ function clauses(): Clause[] {
       id: "keys",
       title: "Room keys",
       body: [
-        "A room key is an on-chain item from the RoomKeys contract. It gives access to a room and a share of that room's fees while you hold it. It is not a share in a coin, a room or in us. It is not a promise of any payment or return. What key holders receive depends entirely on activity in the room, and it can be nothing.",
+        "A room key is an on-chain item from the RoomKeys contract. It gives access to a room and a share of that room's fees while you hold it. It is not a share in a coin, a room or in us. It is not a promise of any payment or return. What key holders receive depends on activity in the room.",
         "The contract sets the price on a fixed curve: it rises as keys are bought and falls as they are sold. The rules below are written into the contracts and apply to everyone:",
         [
           "Key trades pay an 8% fee: 4% to the room's host, 2% to the room's key holders and 2% to us.",
@@ -107,7 +105,7 @@ function clauses(): Clause[] {
       title: "Calls, posts and your content",
       body: [
         "Calls, posts, messages and room descriptions are the views of the people who write them, not ours. A call's receipt shows on-chain prices: the market cap when it was posted and now. A receipt, a win rate or a badge is not an endorsement of the person or the coin.",
-        `You keep ownership of what you post. You give ${n} a worldwide, royalty-free licence to host, show, copy and share it as part of running and promoting the Service. The licence ends when you delete it, except for copies others have already shared or that we keep for legal reasons.`,
+        `You keep ownership of what you post. You give ${n} a worldwide, royalty-free licence to host, show, copy and share it as part of running and promoting the Service. The licence ends when it's deleted, except for copies others have already shared or that we keep for legal reasons.`,
         "You must have the right to post what you post.",
       ],
     },
@@ -132,7 +130,7 @@ function clauses(): Clause[] {
       id: "moderation",
       title: "Moderation and ending access",
       body: [
-        "We may remove content, hide rooms or coins, and limit or end anyone's access to the Service, with or without notice, if we think these terms or the law require it or people are at risk.",
+        "We may remove content, hide rooms or coins, and limit or end anyone's access to the Service, with or without notice, if we think these terms or the law require it, or to protect people using the Service.",
         "We can't freeze or take your on-chain assets. Your keys and coins stay in your wallet, and the contracts remain usable directly on Base.",
         "You can stop using the Service at any time.",
       ],
@@ -145,19 +143,10 @@ function clauses(): Clause[] {
       ],
     },
     {
-      id: "risks",
-      title: "Risks",
+      id: "onchain",
+      title: "Transactions on Base",
       body: [
-        "Using crypto and smart contracts carries risks we can't remove. These include:",
-        [
-          "prices that move fast, including to zero, and thin liquidity;",
-          "bugs in contracts, wallets or third-party protocols;",
-          "network congestion or outages on Base;",
-          "lost keys and mistyped addresses;",
-          "scams by other users;",
-          "laws and taxes that change.",
-        ],
-        "The contracts have been tested but not audited by a third party. You are responsible for any tax on your activity.",
+        "Transactions on Base are final once confirmed. Prices of coins and keys are set by the market and the contracts, and they change over time. The Service runs on software, networks and other services that can sometimes be slow or unavailable. You are responsible for any tax on your activity.",
       ],
     },
     {
@@ -220,76 +209,48 @@ function clauses(): Clause[] {
   return list;
 }
 
+const CONTRACT_LINKS = CONTRACTS.length ? (
+  <div className="mono mt-3 space-y-1 text-[11px] text-muted">
+    {CONTRACTS.map(([label, addr]) => (
+      <div key={addr} className="flex flex-wrap gap-x-2">
+        <span>{label}</span>
+        <a href={`${SCAN}/address/${addr}#code`} target="_blank" rel="noreferrer" className="break-all text-accent-soft">
+          {addr}
+        </a>
+      </div>
+    ))}
+  </div>
+) : null;
+
 export default function Page() {
-  const list = clauses();
+  const list = clauses().map((c) =>
+    c.id === "keys"
+      ? { ...c, extra: CONTRACT_LINKS }
+      : c.id === "agreement"
+        ? {
+            ...c,
+            extra: (
+              <p className="mt-2.5 text-[14.5px] text-soft">
+                <Link href="/privacy" className="text-accent-soft underline underline-offset-2">Privacy Policy →</Link>
+              </p>
+            ),
+          }
+        : c,
+  );
   return (
     <>
       <Main>
         <PageHeader title="Terms" sub={`LAST UPDATED ${UPDATED.toUpperCase()}`} />
-        <section className="panel art m-4 p-6 sm:m-5">
-          <Corners />
-          <span className="label">// SHORT VERSION</span>
-          <ul className="mt-3 max-w-xl space-y-1.5 text-[14.5px] leading-relaxed text-soft">
-            <li>{SITE.name} is software on Base. We never hold your funds and never ask for your seed phrase.</li>
-            <li>Keys give room access and a share of that room&rsquo;s fees, which can be nothing. They aren&rsquo;t investments.</li>
-            <li>Calls are people&rsquo;s opinions, not advice.</li>
-            <li>Founders get a badge and early access. No token, no points, no airdrop.</li>
-            <li>Don&rsquo;t manipulate markets, scam or game the waitlist.</li>
-          </ul>
-          <p className="mono mt-4 text-[11px] text-muted">The full terms below are what apply.</p>
-        </section>
-
-        <nav className="mx-4 mb-2 flex flex-wrap gap-x-3 gap-y-1.5 sm:mx-5">
-          {list.map((c, i) => (
-            <a key={c.id} href={`#${c.id}`} className="mono text-[11px] tracking-[0.06em] text-muted hover:text-accent-soft">
-              {String(i + 1).padStart(2, "0")} {c.title.toUpperCase()}
-            </a>
-          ))}
-        </nav>
-
-        <article className="px-4 pb-10 sm:px-5">
-          {list.map((c, i) => (
-            <section key={c.id} id={c.id} className="scroll-mt-28 border-t border-accent/15 py-5">
-              <h2 className="flex items-baseline gap-3 text-[16px] font-bold">
-                <span className="mono text-[12px] text-accent">{String(i + 1).padStart(2, "0")}</span>
-                {c.title}
-              </h2>
-              <div className="mt-2.5 space-y-2.5 text-[14.5px] leading-relaxed text-soft">
-                {c.body.map((b, j) =>
-                  typeof b === "string" ? (
-                    <p key={j}>{b}</p>
-                  ) : (
-                    <ul key={j} className="space-y-1.5 pl-1">
-                      {b.map((li, k) => (
-                        <li key={k} className="flex gap-2.5">
-                          <span className="mono text-accent">›</span>
-                          <span>{li}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ),
-                )}
-              </div>
-              {c.id === "keys" && (
-                <div className="mono mt-3 space-y-1 text-[11px] text-muted">
-                  {CONTRACTS.map(([label, addr]) => (
-                    <div key={addr} className="flex flex-wrap gap-x-2">
-                      <span>{label}</span>
-                      <a href={`${SCAN}/address/${addr}#code`} target="_blank" rel="noreferrer" className="break-all text-accent-soft">
-                        {addr}
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {c.id === "agreement" && (
-                <p className="mt-2.5 text-[14.5px] text-soft">
-                  <Link href="/privacy" className="text-accent-soft underline underline-offset-2">Privacy Policy →</Link>
-                </p>
-              )}
-            </section>
-          ))}
-        </article>
+        <LegalDoc
+          summary={[
+            `${SITE.name} is software on Base. You keep your own wallet; we never ask for your seed phrase.`,
+            "Keys give you room access and a share of that room’s fees.",
+            "Calls are people’s own views, not advice.",
+            "Founders get a badge and early access. No token, no points, no airdrop.",
+            "Keep it fair: no market manipulation, scams or gaming the waitlist.",
+          ]}
+          clauses={list}
+        />
       </Main>
       <Rail />
     </>
