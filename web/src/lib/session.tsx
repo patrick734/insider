@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getIdentityToken, useCreateWallet, useIdentityToken, usePrivy, useSignMessage, useUser, useWallets } from "@privy-io/react-auth";
 import { createPublicClient, createWalletClient, custom, http, type Hash, type WalletClient } from "viem";
@@ -92,9 +92,13 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const { signMessage: privySign } = useSignMessage();
-  // The wallet Privy made for this person comes first, so the same login is the same account on every device.
+  // Stay on the wallet the current session uses; otherwise the wallet Privy made for this person comes first, so the
+  // same login is the same account on every device.
   const active =
-    wallets.find((w) => w.walletClientType === "privy") ?? wallets.find((w) => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase()) ?? wallets[0];
+    wallets.find((w) => w.address.toLowerCase() === me?.address) ??
+    wallets.find((w) => w.walletClientType === "privy") ??
+    wallets.find((w) => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase()) ??
+    wallets[0];
 
   const wallet = useCallback(async () => {
     if (!active) {
@@ -106,16 +110,26 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     return createWalletClient({ account: active.address as `0x${string}`, chain, transport: custom(provider) });
   }, [active, login]);
 
-  // Signed in with X (or email) but Privy made no wallet: make one, since the session hangs off a wallet address.
+  // Every account gets its own Privy wallet, including people who signed in with MetaMask and then link X.
+  // (createOnLogin covers new sign-ins; this covers links made later and anyone Privy skipped.)
+  const hasPrivyWallet = !!user?.linkedAccounts?.some((a) => a.type === "wallet" && "walletClientType" in a && a.walletClientType === "privy");
+  const creating = useRef(false);
   useEffect(() => {
-    if (!ready || !authenticated || !walletsReady || wallets.length > 0 || user?.wallet) return;
-    setSigningIn(true);
-    createWallet().catch((e: unknown) => {
-      console.error("create wallet", e);
-      setSigningIn(false);
-      setError("Couldn't set up your wallet. Try again.");
-    });
-  }, [ready, authenticated, walletsReady, wallets.length, user?.wallet, createWallet, attempt]);
+    if (!ready || !authenticated || !walletsReady || hasPrivyWallet || creating.current) return;
+    creating.current = true;
+    if (wallets.length === 0) setSigningIn(true);
+    createWallet()
+      .catch((e: unknown) => {
+        console.error("create wallet", e);
+        if (wallets.length === 0) {
+          setSigningIn(false);
+          setError("Couldn't set up your wallet. Try again.");
+        }
+      })
+      .finally(() => {
+        creating.current = false;
+      });
+  }, [ready, authenticated, walletsReady, hasPrivyWallet, wallets.length, createWallet, attempt, user?.twitter?.username]);
 
   // Once Privy has a wallet and we have no session for it, start one. First with Privy's identity token (no prompt);
   // if the wallet isn't in the token yet, refresh it once; only then fall back to signing a message.

@@ -14,8 +14,8 @@ export function Providers({ children, me }: { children: React.ReactNode; me: Me 
         loginMethods: ["email", "twitter", "farcaster", "wallet"],
         ...(WALLETCONNECT_ID ? { walletConnectCloudProjectId: WALLETCONNECT_ID } : {}),
         appearance: { theme: "dark", accentColor: "#2EA8FF", landingHeader: `Sign in to ${SITE.name}`, showWalletLoginFirst: false },
-        // Email and social sign-ins get a wallet in the background: no seed phrase on first run.
-        embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
+        // Every sign-in gets its own wallet in the background (no seed phrase), even people who come with MetaMask.
+        embeddedWallets: { ethereum: { createOnLogin: "all-users" } },
         defaultChain: chain,
         supportedChains: [chain],
       }}
