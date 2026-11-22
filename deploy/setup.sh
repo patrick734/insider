@@ -31,6 +31,7 @@ echo "== Settings (saved in $CONF; edit or delete a line there to change it)"
 ask DOMAIN "Domain" "insider.family"
 ask PRIVY_APP_ID "Privy App ID" "cmwrox1vk01mb0hjqixvfsfiy"
 ask X_HANDLE "Project X handle (without @)" "insiderfamily"
+ask PRIVY_APP_SECRET "Privy App Secret (kept private; Enter to skip if identity tokens are on)" "" secret
 ask ADMIN_ADDRESSES "Admin wallet address(es), comma-separated" "0x05f1d3984f32a9fcb2d019e78764a20bc57da13d"
 ask BASE_RPC_URL "Base RPC URL (Alchemy/QuickNode; kept private; Enter to skip for now)" "" secret
 ask X_BEARER_TOKEN "X API bearer token for follow checks (Enter to skip)" "" secret
@@ -82,6 +83,7 @@ NEXT_PUBLIC_SITE_URL=https://$DOMAIN
 NEXT_PUBLIC_BRAND_DOMAIN=$DOMAIN
 NEXT_PUBLIC_REALTIME_URL=wss://$DOMAIN
 NEXT_PUBLIC_PRIVY_APP_ID=$PRIVY_APP_ID
+PRIVY_APP_SECRET=$PRIVY_APP_SECRET
 NEXT_PUBLIC_PROJECT_X_HANDLE=$X_HANDLE
 NEXT_PUBLIC_BUILDER_CODE=$BUILDER_CODE
 NEXT_PUBLIC_LEGAL_ENTITY="$LEGAL_ENTITY"

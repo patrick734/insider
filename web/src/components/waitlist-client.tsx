@@ -45,7 +45,7 @@ export function WaitlistClient({ initial, projectX, siteUrl }: { initial: Me | n
   }, [me?.id]);
 
   // Once Privy has an X account linked, record it (a fresh identity token proves which X account it is).
-  const recordX = async () => call("/api/waitlist/x", { idToken: PRIVY_APP_ID ? await x.getToken() : null });
+  const recordX = async () => call("/api/waitlist/x", PRIVY_APP_ID ? await x.getTokens() : {});
   useEffect(() => {
     if (me && w?.joined && !w.xHandle && x.username) void recordX();
     // eslint-disable-next-line react-hooks/exhaustive-deps

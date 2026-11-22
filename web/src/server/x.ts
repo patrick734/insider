@@ -17,22 +17,44 @@ let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 export type PrivyLinked = { type: string; subject?: string; username?: string; address?: string; chain_type?: string };
 
 /** The accounts a person linked in Privy, from an identity token Privy signed for this app (null if it doesn't check out). */
-export async function privyLinkedAccounts(idToken: string): Promise<PrivyLinked[] | null> {
+export async function privyLinkedAccounts(idToken: string, accessToken?: string | null): Promise<PrivyLinked[] | null> {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-  if (!appId || !idToken) return null;
+  if (!appId) return null;
   jwks ??= createRemoteJWKSet(new URL(`https://auth.privy.io/api/v1/apps/${appId}/jwks.json`));
+  if (idToken) {
+    try {
+      const { payload } = await jwtVerify(idToken, jwks, { issuer: "privy.io", audience: appId });
+      const raw = payload.linked_accounts;
+      const accounts = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (Array.isArray(accounts)) return accounts as PrivyLinked[];
+    } catch {
+      // fall through to the access token
+    }
+  }
+  // Without an identity token: the access token says who the Privy user is, and Privy's API (with the app secret)
+  // lists their linked accounts.
+  const secret = process.env.PRIVY_APP_SECRET;
+  if (!accessToken || !secret) return null;
   try {
-    const { payload } = await jwtVerify(idToken, jwks, { issuer: "privy.io", audience: appId });
-    const raw = payload.linked_accounts;
-    const accounts = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return Array.isArray(accounts) ? (accounts as PrivyLinked[]) : [];
+    const { payload } = await jwtVerify(accessToken, jwks, { issuer: "privy.io", audience: appId });
+    if (!payload.sub) return null;
+    const r = await fetch(`https://auth.privy.io/api/v1/users/${encodeURIComponent(payload.sub)}`, {
+      headers: { authorization: `Basic ${Buffer.from(`${appId}:${secret}`).toString("base64")}`, "privy-app-id": appId },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!r.ok) {
+      console.warn(`[privy] user lookup failed: ${r.status}`);
+      return null;
+    }
+    const u = (await r.json()) as { linked_accounts?: PrivyLinked[] };
+    return Array.isArray(u.linked_accounts) ? u.linked_accounts : [];
   } catch {
     return null;
   }
 }
 
-export async function xFromPrivyToken(idToken: string): Promise<XAccount | null> {
-  const x = (await privyLinkedAccounts(idToken))?.find((a) => a.type === "twitter_oauth");
+export async function xFromPrivyToken(idToken: string, accessToken?: string | null): Promise<XAccount | null> {
+  const x = (await privyLinkedAccounts(idToken, accessToken))?.find((a) => a.type === "twitter_oauth");
   return x?.subject && x.username ? { id: x.subject, username: x.username } : null;
 }
 
