@@ -32,6 +32,7 @@ ask DOMAIN "Domain" "insider.family"
 ask PRIVY_APP_ID "Privy App ID" "cmwrox1vk01mb0hjqixvfsfiy"
 ask X_HANDLE "Project X handle (without @)" "insiderfamily"
 ask PRIVY_APP_SECRET "Privy App Secret (kept private; Enter to skip if identity tokens are on)" "" secret
+ask WAITLIST "Waitlist first? 1 = only admins and people you let in see the app, 0 = everyone gets in" "1"
 ask ADMIN_ADDRESSES "Admin wallet address(es), comma-separated" "0x05f1d3984f32a9fcb2d019e78764a20bc57da13d"
 ask BASE_RPC_URL "Base RPC URL (Alchemy/QuickNode; kept private; Enter to skip for now)" "" secret
 ask X_BEARER_TOKEN "X API bearer token for follow checks (Enter to skip)" "" secret
@@ -96,7 +97,7 @@ ALLOWED_ORIGINS=https://$DOMAIN
 WEB_PORT=$WEB_PORT
 REALTIME_PORT=$RT_PORT
 UPLOAD_DIR=$HOME/insider-uploads-live
-WAITLIST_MODE=1
+WAITLIST_MODE=$WAITLIST
 INDEXER=$INDEXER
 ENV
 umask 022
