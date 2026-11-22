@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { activity, liveRooms } from "@/server/queries";
+import { getMe } from "@/server/auth";
+import { hasAppAccess } from "@/server/access";
 import { ago } from "@/lib/format";
 import { CoinTile } from "./avatar";
 import { HotChip, Sparkline } from "./sparkline";
@@ -11,6 +13,8 @@ const KIND_COLOR: Record<string, string> = { BUY: "text-accent", SELL: "text-tex
 
 /** Desktop right column: search, live rooms, the keys card and recent activity. */
 export async function Rail() {
+  // Waitlist-first: people without app access don't get links into the app.
+  if (!(await hasAppAccess(await getMe()))) return null;
   const [rooms, feed] = await Promise.all([liveRooms(5), activity(6)]);
   return (
     <aside aria-label="Live now" className="sticky top-0 hidden h-dvh w-[340px] flex-none flex-col gap-4 overflow-y-auto py-4 pl-6 pr-5 xl:flex [&>*]:flex-none">

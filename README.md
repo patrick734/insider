@@ -104,6 +104,28 @@ It installs Postgres and Redis if missing, writes `web/.env.local`, migrates, se
 (port 3200) and `insider-realtime` (port 4101) under pm2 and adds the domain to Caddy. Run the same command again to
 update. `*.sslip.io` names resolve to the IP inside them, so no DNS change is needed for a test address.
 
+## Going live
+
+`deploy/setup.sh` replaces the demo on the same server: its own database (`insider_live`, no sample data), real
+sign-in through Privy, waitlist-first mode, the indexer and nightly backups.
+
+```
+cd ~/insider && git pull && bash deploy/setup.sh
+```
+
+It asks once for the Privy App ID, the project's X handle, admin wallet addresses, a Base RPC URL, and optionally an X
+API bearer token (follow checks), a 0x API key and a Builder Code, and keeps the answers in `~/.insider-live.env`
+(private; edit or delete a line to change it). Run the same command again after each `git pull` to update.
+
+- **Waitlist-first** (`WAITLIST_MODE=1`): visitors see only `/waitlist`, share links, terms and privacy until an
+  admin gives them access. Hosts already set up keep access.
+- **Admin review** at `/admin/waitlist` (wallets in `ADMIN_ADDRESSES`): top 20 with invite counts, same-network
+  clusters, pending follows; hold or clear a rank, give or remove app access.
+- **Share links** `/s/CODE` show a preview card (`/api/og/CODE`: inviter, founder number, rank, spots left, code).
+- **Health check** `/api/health` reports the database and Redis.
+- **Backups** run at 03:17 into `~/insider-backups`, kept 14 days. Restore with
+  `gunzip -c FILE.sql.gz | psql "$DATABASE_URL"`.
+
 ## Production notes
 
 - Postgres behind a pooler (transaction mode), Redis managed, the web app, realtime and indexer as separate services.
