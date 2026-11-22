@@ -36,6 +36,9 @@ ask BASE_RPC_URL "Base RPC URL (Alchemy/QuickNode; kept private; Enter to skip f
 ask X_BEARER_TOKEN "X API bearer token for follow checks (Enter to skip)" "" secret
 ask ZEROX_API_KEY "0x API key for swaps (Enter to skip)" "" secret
 ask BUILDER_CODE "Base Builder Code (Enter to skip)" ""
+ask LEGAL_ENTITY "Legal name of who runs the site, for the terms (Enter to skip)" ""
+ask LEGAL_EMAIL "Contact email shown in the terms (Enter to use your X handle instead)" ""
+ask LEGAL_JURISDICTION "Governing law for the terms, e.g. England and Wales (Enter to skip)" ""
 [ -n "$PRIVY_APP_ID" ] || { echo "A Privy App ID is required."; exit 1; }
 INDEXER=1
 if [ -z "$BASE_RPC_URL" ]; then
@@ -81,6 +84,9 @@ NEXT_PUBLIC_REALTIME_URL=wss://$DOMAIN
 NEXT_PUBLIC_PRIVY_APP_ID=$PRIVY_APP_ID
 NEXT_PUBLIC_PROJECT_X_HANDLE=$X_HANDLE
 NEXT_PUBLIC_BUILDER_CODE=$BUILDER_CODE
+NEXT_PUBLIC_LEGAL_ENTITY="$LEGAL_ENTITY"
+NEXT_PUBLIC_LEGAL_EMAIL=$LEGAL_EMAIL
+NEXT_PUBLIC_LEGAL_JURISDICTION="$LEGAL_JURISDICTION"
 X_BEARER_TOKEN=$X_BEARER_TOKEN
 ZEROX_API_KEY=$ZEROX_API_KEY
 ADMIN_ADDRESSES=$ADMIN_ADDRESSES

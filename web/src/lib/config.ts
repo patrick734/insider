@@ -14,6 +14,13 @@ export const SITE = {
   tld: dot > 0 ? domain.slice(dot) : "",
   url: process.env.NEXT_PUBLIC_SITE_URL || `https://${domain}`,
   tagline: process.env.NEXT_PUBLIC_BRAND_TAGLINE || "The clubhouse for every coin on Base.",
+  /** Who runs the site, how to reach them, and whose law governs the terms (shown on /terms and /privacy). */
+  legal: {
+    entity: process.env.NEXT_PUBLIC_LEGAL_ENTITY || "",
+    email: process.env.NEXT_PUBLIC_LEGAL_EMAIL || "",
+    jurisdiction: process.env.NEXT_PUBLIC_LEGAL_JURISDICTION || "",
+  },
+  xHandle: process.env.NEXT_PUBLIC_PROJECT_X_HANDLE || "insiderfamily",
 };
 
 export const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL || "ws://localhost:4001";

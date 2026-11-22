@@ -14,7 +14,7 @@ const envFile = path.join(root, "web/.env.local");
 const env = {};
 for (const line of fs.existsSync(envFile) ? fs.readFileSync(envFile, "utf8").split("\n") : []) {
   const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(line);
-  if (m) env[m[1]] = m[2];
+  if (m) env[m[1]] = m[2].replace(/^"(.*)"$/, "$1");
 }
 const WEB_PORT = env.WEB_PORT || "3200";
 // npm workspaces hoist next to the root node_modules; resolve it from the web app.
