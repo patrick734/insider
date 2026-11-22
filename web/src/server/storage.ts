@@ -7,16 +7,16 @@ import { join, resolve } from "node:path";
  * headers so a CDN in front keeps them. Swap these two functions for S3 / Cloudflare R2 when traffic needs it; nothing
  * else touches the files.
  */
-const dir = () => resolve(process.env.UPLOAD_DIR || join(process.cwd(), ".uploads"));
+const dir = () => resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || join(/*turbopackIgnore: true*/ process.cwd(), ".uploads"));
 
 export async function putObject(id: string, bytes: Buffer): Promise<void> {
   await mkdir(dir(), { recursive: true });
-  await writeFile(join(dir(), id), bytes, { flag: "wx" });
+  await writeFile(join(/*turbopackIgnore: true*/ dir(), id), bytes, { flag: "wx" });
 }
 
 export async function getObject(id: string): Promise<Buffer | null> {
   if (!/^[a-z0-9]{24}$/.test(id)) return null;
-  return readFile(join(dir(), id)).catch(() => null);
+  return readFile(join(/*turbopackIgnore: true*/ dir(), id)).catch(() => null);
 }
 
 /** Image type from the file's first bytes (never trust the browser's label). */
