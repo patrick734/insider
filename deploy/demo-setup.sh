@@ -67,6 +67,11 @@ pm2 startOrReload deploy/ecosystem.config.cjs --update-env
 pm2 save >/dev/null
 
 echo "== Caddy"
+# A fresh Caddy install ships a catch-all welcome page on :80; set it aside so it doesn't swallow this site's traffic.
+if sudo grep -q "/usr/share/caddy" /etc/caddy/Caddyfile; then
+  sudo mv /etc/caddy/Caddyfile /etc/caddy/Caddyfile.default.bak
+  sudo touch /etc/caddy/Caddyfile
+fi
 if ! sudo grep -q "^$DOMAIN {" /etc/caddy/Caddyfile; then
   sudo tee -a /etc/caddy/Caddyfile >/dev/null <<CADDY
 
