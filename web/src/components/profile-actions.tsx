@@ -18,11 +18,55 @@ export function ProfileActions({ profile: p, isMe }: { profile: Profile; isMe: b
   const [following, setFollowing] = useState(p.viewerFollows);
   const [sheet, setSheet] = useState(false);
 
+  const room = p.rooms[0] ?? {
+    id: "0",
+    slug: "",
+    title: `${displayName(p)}'s room`,
+    topic: null,
+    access: "gated" as const,
+    isLive: false,
+    liveTitle: null,
+    online: 0,
+    coinSymbol: null,
+    coinAddress: null,
+    host: p,
+    heat: 0,
+    msgs10m: 0,
+    keySpark: [],
+    members: 0,
+    lastActiveAt: null,
+  };
+  const sheetEl = sheet ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <button aria-label="Close" onClick={() => setSheet(false)} className="absolute inset-0 bg-black/65 backdrop-blur-[2px]" />
+          <section role="dialog" aria-label={`Buy ${displayName(p)}'s keys`} className="relative w-full max-w-md border-t border-accent bg-[#02070D] p-4 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(46,168,255,0.22)] sm:border">
+            <div className="mx-auto mb-3.5 h-1 w-10 bg-accent-soft/35 sm:hidden" />
+            <KeysPanel room={room} me={me} supplyHint={p.keySupply} onDone={() => (setSheet(false), router.refresh())} />
+            <div className="label mt-4 text-[10px]">// WHAT KEYS GET YOU</div>
+            {[`${displayName(p)}'s key chat, with calls before they hit the timeline`, "A share of the room's swap and key fees, streamed to holders", "Entry to holders-only calls in the room"].map((t) => (
+              <div key={t} className="mt-2 flex gap-2.5 text-sm leading-snug text-body">
+                <span className="dot mt-1.5 flex-none" />
+                {t}
+              </div>
+            ))}
+          </section>
+        </div>
+  ) : null;
+
+  // Your own profile: edit it, and open or trade your own keys (the first key is the host's, and it opens the market).
   if (isMe)
     return (
-      <Link href="/settings" className="btn btn-off">
-        EDIT PROFILE
-      </Link>
+      <>
+        <span className="flex flex-wrap gap-2 pb-1 sm:justify-end">
+          <Link href="/settings" className="btn btn-off">
+            EDIT PROFILE
+          </Link>
+          <button onClick={() => setSheet(true)} className="btn btn-on shadow-[0_0_24px_rgba(46,168,255,0.55)]">
+            {p.keySupply > 0 ? "YOUR KEYS" : "OPEN YOUR KEYS"}
+          </button>
+        </span>
+        {sheetEl}
+      </>
     );
 
   const follow = async () => {
@@ -45,24 +89,6 @@ export function ProfileActions({ profile: p, isMe }: { profile: Profile; isMe: b
     }
   };
 
-  const room = p.rooms[0] ?? {
-    id: "0",
-    slug: "",
-    title: `${displayName(p)}'s room`,
-    topic: null,
-    access: "gated" as const,
-    isLive: false,
-    liveTitle: null,
-    online: 0,
-    coinSymbol: null,
-    coinAddress: null,
-    host: p,
-    heat: 0,
-    msgs10m: 0,
-    keySpark: [],
-    members: 0,
-    lastActiveAt: null,
-  };
 
   return (
     <>
@@ -88,22 +114,7 @@ export function ProfileActions({ profile: p, isMe }: { profile: Profile; isMe: b
           )}
         </span>
       </span>
-      {sheet && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <button aria-label="Close" onClick={() => setSheet(false)} className="absolute inset-0 bg-black/65 backdrop-blur-[2px]" />
-          <section role="dialog" aria-label={`Buy ${displayName(p)}'s keys`} className="relative w-full max-w-md border-t border-accent bg-[#02070D] p-4 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(46,168,255,0.22)] sm:border">
-            <div className="mx-auto mb-3.5 h-1 w-10 bg-accent-soft/35 sm:hidden" />
-            <KeysPanel room={room} me={me} supplyHint={p.keySupply} onDone={() => (setSheet(false), router.refresh())} />
-            <div className="label mt-4 text-[10px]">// WHAT KEYS GET YOU</div>
-            {[`${displayName(p)}'s key chat, with calls before they hit the timeline`, "A share of the room's swap and key fees, streamed to holders", "Entry to holders-only calls in the room"].map((t) => (
-              <div key={t} className="mt-2 flex gap-2.5 text-sm leading-snug text-body">
-                <span className="dot mt-1.5 flex-none" />
-                {t}
-              </div>
-            ))}
-          </section>
-        </div>
-      )}
+      {sheetEl}
     </>
   );
 }
