@@ -43,9 +43,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ code: string }
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <svg width="58" height="58" viewBox="0 0 64 64">
-            <path d="M20 8H8v48h12M44 8h12v48H44" fill="none" stroke={blue} strokeWidth="6" strokeLinecap="square" />
-            <rect x="27" y="14" width="10" height="10" fill={blue} />
-            <rect x="27" y="29" width="10" height="21" fill={blue} />
+            <path d="M6 18V6h12M46 6h12v12M58 46v12H46M18 58H6V46" fill="none" stroke={blue} strokeWidth="4" strokeLinecap="square" />
+            <circle cx="32" cy="26" r="8" fill={blue} />
+            <path d="M27.5 30h9l3 16h-15z" fill={blue} />
           </svg>
           <div style={{ display: "flex", fontSize: 30, fontWeight: 700, letterSpacing: 6 }}>
             {SITE.mark}

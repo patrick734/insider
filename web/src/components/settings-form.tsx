@@ -38,7 +38,7 @@ export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }
       const { id } = (await up.json()) as { id: string };
       return fetch("/api/me", { method: "PATCH", body: JSON.stringify({ avatar: id }) });
     });
-  const pickX = () => photo(async () => fetch("/api/me/x", { method: "POST", body: JSON.stringify({ ...(PRIVY_APP_ID ? await x.getTokens() : {}), photo: true }) }));
+  const pickX = () => photo(async () => fetch("/api/me/x", { method: "POST", body: JSON.stringify({ ...(PRIVY_APP_ID ? await x.getTokens() : {}), photo: true, photoUrl: x.photoUrl }) }));
   const pickGenerated = () => photo(() => fetch("/api/me", { method: "PATCH", body: JSON.stringify({ avatar: null }) }));
 
   const save = async () => {
@@ -67,7 +67,7 @@ export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }
             )}
             {avatarUrl && (
               <button disabled={photoBusy} onClick={() => void pickGenerated()} className="btn btn-off h-9 px-3.5">
-                USE [i] AVATAR
+                REMOVE PHOTO
               </button>
             )}
           </div>

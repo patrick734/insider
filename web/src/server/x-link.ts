@@ -32,20 +32,25 @@ async function copyXPhoto(userId: string, url: string): Promise<string | null> {
 }
 
 /**
- * Record the X account Privy proved for this person. Their X photo becomes their avatar if they have none yet, or
- * always when `usePhoto` (the "use my X photo" button).
+ * Record the X account Privy proved for this person. Their X photo becomes their avatar if they haven't picked one
+ * (no photo and no deliberate choice), or always when `usePhoto` (the "use my X photo" button). The photo comes from
+ * Privy's token, else `photoHint` (the URL Privy gives the browser); either way only X's image host is fetched.
  */
-export async function linkX(userId: string, account: XAccount, usePhoto = false) {
+export async function linkX(userId: string, account: XAccount, usePhoto = false, photoHint?: string | null) {
   try {
     await sql()`update users set x_user_id = ${account.id}, x_handle = ${account.username} where id = ${userId}`;
   } catch (e) {
     if ((e as { code?: string }).code === "23505") throw new HttpError(409, "That X account is already linked to another account.");
     throw e;
   }
-  if (!account.picture) return;
-  const [u] = await sql()`select avatar_url from users where id = ${userId}`;
-  if (u?.avatar_url && !usePhoto) return;
-  const url = await copyXPhoto(userId, account.picture);
-  if (url) await sql()`update users set avatar_url = ${url} where id = ${userId}`;
+  const picture = account.picture || photoHint || null;
+  if (!picture) {
+    if (usePhoto) throw new HttpError(404, "Your X account has no photo we can use.");
+    return;
+  }
+  const [u] = await sql()`select avatar_url, avatar_source from users where id = ${userId}`;
+  if (!usePhoto && (u?.avatar_url || u?.avatar_source)) return;
+  const url = await copyXPhoto(userId, picture);
+  if (url) await sql()`update users set avatar_url = ${url}, avatar_source = 'x' where id = ${userId}`;
   else if (usePhoto) throw new HttpError(502, "Couldn't fetch your X photo. Try again in a moment.");
 }

@@ -23,7 +23,7 @@ type Session = {
   /** Run a write, wait for it to land and return the hash. */
   send: (fn: (w: WalletClient) => Promise<Hash>) => Promise<Hash>;
   /** The X account linked to this sign-in (handle), a way to link one, and Privy's identity token proving it. */
-  x: { username: string | null; link: () => void; idToken: string | null; getTokens: () => Promise<{ idToken: string | null; accessToken: string | null }> };
+  x: { username: string | null; photoUrl: string | null; link: () => void; idToken: string | null; getTokens: () => Promise<{ idToken: string | null; accessToken: string | null }> };
   /** "made": the wallet Privy created for an X or email sign-in; "connected": the person's own wallet. */
   walletKind: "made" | "connected" | null;
   /** True while a Privy sign-in is being turned into a session; `error` says why the last try failed. */
@@ -68,7 +68,7 @@ export function DevSessionProvider({ children, initialMe }: { children: React.Re
       wallet: noWallet,
       send: noWallet,
       // Demo: the sample handle stands in for an X account.
-      x: { username: me ? (me.handle ?? `user${me.id}`) : null, link: login, idToken: null, getTokens: async () => ({ idToken: null, accessToken: null }) },
+      x: { username: me ? (me.handle ?? `user${me.id}`) : null, photoUrl: null, link: login, idToken: null, getTokens: async () => ({ idToken: null, accessToken: null }) },
       walletKind: null,
       signingIn: false,
       error: null,
@@ -197,20 +197,21 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     return { idToken, accessToken: await getAccessToken().catch(() => null) };
   }, [refreshUser]);
 
-  // Signed in with X but the account doesn't have it yet: link it once (handle, and the X photo as the avatar if
-  // there's none). Later photo changes are the person's own choice in settings.
+  // Signed in with X and the account is missing the X handle or a photo: link it (once per visit). The server only
+  // fills the photo if the person hasn't chosen one themselves in settings.
   const xSynced = useRef(false);
   useEffect(() => {
-    if (!me || me.xHandle || !user?.twitter?.username || xSynced.current) return;
+    if (!me || (me.xHandle && me.avatarUrl) || !user?.twitter?.username || xSynced.current) return;
     xSynced.current = true;
     void (async () => {
-      const r = await fetch("/api/me/x", { method: "POST", body: JSON.stringify(await getTokens()) }).catch(() => null);
+      const body = { ...(await getTokens()), photoUrl: user.twitter?.profilePictureUrl ?? null };
+      const r = await fetch("/api/me/x", { method: "POST", body: JSON.stringify(body) }).catch(() => null);
       if (r?.ok) {
         setMe(((await r.json()) as { me: Me | null }).me);
         router.refresh();
       }
     })();
-  }, [me, user?.twitter?.username, getTokens, router]);
+  }, [me, user?.twitter?.username, user?.twitter?.profilePictureUrl, getTokens, router]);
   // Already signed in to Privy but no session yet (or the last try failed): try again instead of opening Privy.
   const signIn = useCallback(() => {
     if (authenticated) setAttempt((a) => a + 1);
@@ -244,12 +245,12 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
       refresh,
       wallet,
       send,
-      x: { username: user?.twitter?.username ?? null, link: linkTwitter, idToken: identityToken, getTokens },
+      x: { username: user?.twitter?.username ?? null, photoUrl: user?.twitter?.profilePictureUrl ?? null, link: linkTwitter, idToken: identityToken, getTokens },
       walletKind: active ? (active.walletClientType === "privy" ? "made" : "connected") : null,
       signingIn,
       error,
     }),
-    [active, ready, me, signIn, logout, refresh, wallet, send, user?.twitter?.username, linkTwitter, identityToken, getTokens, signingIn, error],
+    [active, ready, me, signIn, logout, refresh, wallet, send, user?.twitter?.username, linkTwitter, identityToken, getTokens, signingIn, error, user?.twitter?.profilePictureUrl],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

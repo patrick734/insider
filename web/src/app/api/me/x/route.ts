@@ -10,9 +10,9 @@ import { linkX } from "@/server/x-link";
  */
 export const POST = handle(async (req: Request) => {
   const me = await requireMe();
-  const { idToken, accessToken, photo } = await body<{ idToken?: string; accessToken?: string; photo?: boolean }>(req);
+  const { idToken, accessToken, photo, photoUrl } = await body<{ idToken?: string; accessToken?: string; photo?: boolean; photoUrl?: string | null }>(req);
   const account = await xFromPrivyToken(idToken ?? "", accessToken);
   if (!account) throw new HttpError(400, "Couldn't confirm your X account. Sign in with X and try again.");
-  await linkX(me.id, account, photo === true);
+  await linkX(me.id, account, photo === true, typeof photoUrl === "string" ? photoUrl : null);
   return NextResponse.json({ me: await getMe() });
 });

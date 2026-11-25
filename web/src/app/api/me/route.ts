@@ -21,11 +21,11 @@ export const PATCH = handle(async (req: Request) => {
   if (b.name !== undefined && b.name.length > 40) throw new HttpError(400, "Names are 40 characters at most.");
   if (b.bio !== undefined && b.bio.length > 280) throw new HttpError(400, "Bios are 280 characters at most.");
   if (b.avatar !== undefined) {
-    if (b.avatar === null) await sql()`update users set avatar_url = null where id = ${me.id}`;
+    if (b.avatar === null) await sql()`update users set avatar_url = null, avatar_source = 'default' where id = ${me.id}`;
     else {
       const [m] = /^[0-9a-f]{24}$/.test(String(b.avatar)) ? await sql()`select id from media where id = ${b.avatar} and user_id = ${me.id}` : [];
       if (!m) throw new HttpError(400, "Upload the photo first.");
-      await sql()`update users set avatar_url = ${`/api/media/${m.id}`} where id = ${me.id}`;
+      await sql()`update users set avatar_url = ${`/api/media/${m.id}`}, avatar_source = 'upload' where id = ${me.id}`;
     }
   }
   try {
