@@ -42,9 +42,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ code: string }
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", width: 54, height: 54, border: `4px solid ${blue}`, alignItems: "center", justifyContent: "center", boxShadow: `0 0 30px ${blue}` }}>
-            <div style={{ width: 18, height: 18, borderRadius: 18, background: blue }} />
-          </div>
+          <svg width="58" height="58" viewBox="0 0 64 64">
+            <path d="M20 8H8v48h12M44 8h12v48H44" fill="none" stroke={blue} strokeWidth="6" strokeLinecap="square" />
+            <rect x="27" y="14" width="10" height="10" fill={blue} />
+            <rect x="27" y="29" width="10" height="21" fill={blue} />
+          </svg>
           <div style={{ display: "flex", fontSize: 30, fontWeight: 700, letterSpacing: 6 }}>
             {SITE.mark}
             <span style={{ color: blue, letterSpacing: 1 }}>{SITE.tld}</span>

@@ -35,8 +35,8 @@ function clauses(): Clause[] {
         "From you, when you use the Service:",
         [
           "Your wallet address, when you sign in with a wallet.",
-          "Your X account, when you sign in with X: your X user ID and handle, follower count, when the account was created, and whether it follows our X account.",
-          "Your profile: handle, name, bio, avatar and banner.",
+          "Your X account, when you sign in with X: your X user ID and handle, profile photo (we keep a copy as your avatar until you change it), follower count, when the account was created, and whether it follows our X account.",
+          "Your profile: handle, name, bio, photo and banner. Without a photo you get a generated avatar.",
           "What you post and do: posts, calls, room messages, articles, images, likes, reposts, tips, bookmarks, watchlists and rooms you join.",
           "Direct messages, stored so the people in the conversation can read them.",
           "Waitlist details: your invite code, who invited you, who you invited, your founder number and rank.",

@@ -10,11 +10,11 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
  * Follow check and account age/followers need the X API (X_BEARER_TOKEN). Without it, follows stay "pending" and
  * never count as verified, as the plan says.
  */
-export type XAccount = { id: string; username: string };
+export type XAccount = { id: string; username: string; picture: string | null };
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
-export type PrivyLinked = { type: string; subject?: string; username?: string; address?: string; chain_type?: string };
+export type PrivyLinked = { type: string; subject?: string; username?: string; address?: string; chain_type?: string; profile_picture_url?: string | null };
 
 /** The accounts a person linked in Privy, from an identity token Privy signed for this app (null if it doesn't check out). */
 export async function privyLinkedAccounts(idToken: string, accessToken?: string | null): Promise<PrivyLinked[] | null> {
@@ -55,7 +55,7 @@ export async function privyLinkedAccounts(idToken: string, accessToken?: string 
 
 export async function xFromPrivyToken(idToken: string, accessToken?: string | null): Promise<XAccount | null> {
   const x = (await privyLinkedAccounts(idToken, accessToken))?.find((a) => a.type === "twitter_oauth");
-  return x?.subject && x.username ? { id: x.subject, username: x.username } : null;
+  return x?.subject && x.username ? { id: x.subject, username: x.username, picture: x.profile_picture_url ?? null } : null;
 }
 
 export type XCheck = { status: "verified" | "pending" | "failed"; reason?: string; followers?: number; createdAt?: string };

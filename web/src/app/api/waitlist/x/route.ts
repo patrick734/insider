@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { sql } from "@insider/core";
 import { HttpError, requireMe } from "@/server/auth";
 import { body, handle } from "@/server/http";
 import { demoLoginEnabled } from "@/server/demo";
-import { xFromPrivyToken } from "@/server/x";
+import { xFromPrivyToken, type XAccount } from "@/server/x";
+import { linkX } from "@/server/x-link";
 import { waitlistMe } from "@/server/waitlist";
 
 /**
@@ -13,17 +13,12 @@ import { waitlistMe } from "@/server/waitlist";
 export const POST = handle(async (req: Request) => {
   const me = await requireMe();
   const { idToken, accessToken } = await body<{ idToken?: string; accessToken?: string }>(req);
-  let account: { id: string; username: string } | null;
-  if (demoLoginEnabled()) account = { id: `demo:${me.id}`, username: me.handle ?? `user${me.id}` };
+  let account: XAccount | null;
+  if (demoLoginEnabled()) account = { id: `demo:${me.id}`, username: me.handle ?? `user${me.id}`, picture: null };
   else account = await xFromPrivyToken(idToken ?? "", accessToken);
   if (!account && !idToken && !process.env.PRIVY_APP_SECRET)
     throw new HttpError(400, "Couldn't get a sign-in token from Privy. Check that identity tokens are on in the Privy dashboard.");
   if (!account) throw new HttpError(400, "Your X account isn't linked to this sign-in. Tap Link X.");
-  try {
-    await sql()`update users set x_user_id = ${account.id}, x_handle = ${account.username} where id = ${me.id}`;
-  } catch (e) {
-    if ((e as { code?: string }).code === "23505") throw new HttpError(409, "That X account is already on the waitlist.");
-    throw e;
-  }
+  await linkX(me.id, account);
   return NextResponse.json(await waitlistMe(me.id));
 });

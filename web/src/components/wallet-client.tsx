@@ -12,6 +12,7 @@ import { ago, eth, shortAddr } from "@/lib/format";
 import { CoinTile } from "./avatar";
 import { Corners, Tabs, type TabLink } from "./page";
 import { Icon } from "./icons";
+import { DepositSheet } from "./deposit";
 
 type Props = {
   tab: "tokens" | "keys" | "rooms" | "activity";
@@ -29,6 +30,7 @@ export function WalletClient(p: Props) {
   const [owed, setOwed] = useState<bigint>(0n);
   const [rewards, setRewards] = useState<Record<string, bigint>>({});
   const [copied, setCopied] = useState(false);
+  const [deposit, setDeposit] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const addr = p.address as `0x${string}`;
 
@@ -81,7 +83,7 @@ export function WalletClient(p: Props) {
         </div>
         <span className="mono mt-1.5 block text-xs text-accent">{BigInt(p.earned.week) > 0n ? `${eth(p.earned.week, { sign: true })} earned from rooms, keys and tips this week` : "Earn from hosting rooms, your keys and tips."}</span>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          <button onClick={() => navigator.clipboard.writeText(p.address)} className="btn btn-on h-[38px] px-[18px]">
+          <button onClick={() => setDeposit(true)} className="btn btn-on h-[38px] px-[18px]">
             DEPOSIT
           </button>
           <a href={`${chain.blockExplorers?.default.url}/address/${p.address}`} target="_blank" rel="noreferrer" className="btn btn-off h-[38px] px-[18px]">
@@ -96,6 +98,7 @@ export function WalletClient(p: Props) {
         </div>
         {msg && <p className="mono mt-2.5 text-[11px] text-accent-soft">{msg}</p>}
       </section>
+      {deposit && <DepositSheet address={p.address} balance={balance} onClose={() => setDeposit(false)} />}
       <div className="mx-4 mt-2.5 grid grid-cols-3 gap-2 sm:mx-5 sm:gap-2.5">
         {[
           ["ROOM FEES · 30D", p.earned.roomFees],

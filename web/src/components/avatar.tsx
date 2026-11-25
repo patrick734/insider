@@ -1,12 +1,12 @@
-import { initials } from "@/lib/format";
+import { LogoAvatar } from "./logo-avatar";
 
 type Who = { name: string | null; handle: string | null; address: string; avatarUrl?: string | null };
 
-/** Square avatar: the picture if there is one, else initials on a tile. `on` gives the bright accent tile. */
+/** Square avatar: the picture if there is one, else a generated [i] avatar from the wallet address. */
 export function Avatar({ user, size = 42, on = false }: { user: Who; size?: number; on?: boolean }) {
   return (
     <span className={`tile ${on ? "tile-on" : ""}`} style={{ width: size, height: size, fontSize: Math.round(size / 3.2) }}>
-      {user.avatarUrl ? <img src={user.avatarUrl} alt="" width={size} height={size} className="h-full w-full object-cover" /> : initials(user)}
+      {user.avatarUrl ? <img src={user.avatarUrl} alt="" width={size} height={size} className="h-full w-full object-cover" /> : <LogoAvatar seed={user.address || user.handle || "?"} size={size} />}
     </span>
   );
 }

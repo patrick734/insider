@@ -24,6 +24,8 @@ type Session = {
   send: (fn: (w: WalletClient) => Promise<Hash>) => Promise<Hash>;
   /** The X account linked to this sign-in (handle), a way to link one, and Privy's identity token proving it. */
   x: { username: string | null; link: () => void; idToken: string | null; getTokens: () => Promise<{ idToken: string | null; accessToken: string | null }> };
+  /** "made": the wallet Privy created for an X or email sign-in; "connected": the person's own wallet. */
+  walletKind: "made" | "connected" | null;
   /** True while a Privy sign-in is being turned into a session; `error` says why the last try failed. */
   signingIn: boolean;
   error: string | null;
@@ -67,6 +69,7 @@ export function DevSessionProvider({ children, initialMe }: { children: React.Re
       send: noWallet,
       // Demo: the sample handle stands in for an X account.
       x: { username: me ? (me.handle ?? `user${me.id}`) : null, link: login, idToken: null, getTokens: async () => ({ idToken: null, accessToken: null }) },
+      walletKind: null,
       signingIn: false,
       error: null,
     }),
@@ -92,12 +95,12 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const { signMessage: privySign } = useSignMessage();
-  // Stay on the wallet the current session uses; otherwise the wallet Privy made for this person comes first, so the
-  // same login is the same account on every device.
+  // The account follows the wallet you signed in with: the session's wallet if there is one, else your primary
+  // Privy wallet (the one you connected, or the one made for an X or email sign-in).
   const active =
     wallets.find((w) => w.address.toLowerCase() === me?.address) ??
-    wallets.find((w) => w.walletClientType === "privy") ??
     wallets.find((w) => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase()) ??
+    wallets.find((w) => w.walletClientType === "privy") ??
     wallets[0];
 
   const wallet = useCallback(async () => {
@@ -110,26 +113,23 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     return createWalletClient({ account: active.address as `0x${string}`, chain, transport: custom(provider) });
   }, [active, login]);
 
-  // Every account gets its own Privy wallet, including people who signed in with MetaMask and then link X.
-  // (createOnLogin covers new sign-ins; this covers links made later and anyone Privy skipped.)
-  const hasPrivyWallet = !!user?.linkedAccounts?.some((a) => a.type === "wallet" && "walletClientType" in a && a.walletClientType === "privy");
+  // Signed in with X or email but Privy made no wallet: make one, since the account hangs off a wallet address.
+  // Anyone who connected their own wallet already has one and keeps it.
   const creating = useRef(false);
   useEffect(() => {
-    if (!ready || !authenticated || !walletsReady || hasPrivyWallet || creating.current) return;
+    if (!ready || !authenticated || !walletsReady || wallets.length > 0 || user?.wallet || creating.current) return;
     creating.current = true;
-    if (wallets.length === 0) setSigningIn(true);
+    setSigningIn(true);
     createWallet()
       .catch((e: unknown) => {
         console.error("create wallet", e);
-        if (wallets.length === 0) {
-          setSigningIn(false);
-          setError("Couldn't set up your wallet. Try again.");
-        }
+        setSigningIn(false);
+        setError("Couldn't set up your wallet. Try again.");
       })
       .finally(() => {
         creating.current = false;
       });
-  }, [ready, authenticated, walletsReady, hasPrivyWallet, wallets.length, createWallet, attempt, user?.twitter?.username]);
+  }, [ready, authenticated, walletsReady, wallets.length, user?.wallet, createWallet, attempt]);
 
   // Once Privy has a wallet and we have no session for it, start one. First with Privy's identity token (no prompt);
   // if the wallet isn't in the token yet, refresh it once; only then fall back to signing a message.
@@ -196,6 +196,21 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     }
     return { idToken, accessToken: await getAccessToken().catch(() => null) };
   }, [refreshUser]);
+
+  // Signed in with X but the account doesn't have it yet: link it once (handle, and the X photo as the avatar if
+  // there's none). Later photo changes are the person's own choice in settings.
+  const xSynced = useRef(false);
+  useEffect(() => {
+    if (!me || me.xHandle || !user?.twitter?.username || xSynced.current) return;
+    xSynced.current = true;
+    void (async () => {
+      const r = await fetch("/api/me/x", { method: "POST", body: JSON.stringify(await getTokens()) }).catch(() => null);
+      if (r?.ok) {
+        setMe(((await r.json()) as { me: Me | null }).me);
+        router.refresh();
+      }
+    })();
+  }, [me, user?.twitter?.username, getTokens, router]);
   // Already signed in to Privy but no session yet (or the last try failed): try again instead of opening Privy.
   const signIn = useCallback(() => {
     if (authenticated) setAttempt((a) => a + 1);
@@ -230,10 +245,11 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
       wallet,
       send,
       x: { username: user?.twitter?.username ?? null, link: linkTwitter, idToken: identityToken, getTokens },
+      walletKind: active ? (active.walletClientType === "privy" ? "made" : "connected") : null,
       signingIn,
       error,
     }),
-    [ready, me, signIn, logout, refresh, wallet, send, user?.twitter?.username, linkTwitter, identityToken, getTokens, signingIn, error],
+    [active, ready, me, signIn, logout, refresh, wallet, send, user?.twitter?.username, linkTwitter, identityToken, getTokens, signingIn, error],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

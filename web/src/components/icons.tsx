@@ -42,12 +42,13 @@ export function Icon({ name, size = 20, className, strokeWidth = 1.6 }: { name: 
   );
 }
 
+/** The mark: an "i" inside terminal brackets (the insider). Drawn on a 64 grid so it stays crisp down to 16px. */
 export function LogoMark({ size = 30, color = "#2EA8FF", glow = true }: { size?: number; color?: string; glow?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true" style={glow ? { filter: "drop-shadow(0 0 8px rgba(46,168,255,0.65))" } : undefined}>
-      <path d="M6 18V6h12M46 6h12v12M58 46v12H46M18 58H6V46" stroke={color} strokeWidth={4} strokeLinecap="square" />
-      <circle cx="32" cy="26" r="8" fill={color} />
-      <path d="M27.5 30h9l3 16h-15z" fill={color} />
+      <path d="M20 8H8v48h12M44 8h12v48H44" stroke={color} strokeWidth={6} strokeLinecap="square" />
+      <rect x="27" y="14" width="10" height="10" fill={color} />
+      <rect x="27" y="29" width="10" height="21" fill={color} />
     </svg>
   );
 }

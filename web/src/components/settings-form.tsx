@@ -1,15 +1,45 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSession, type Me } from "@/lib/session";
-import { SITE } from "@/lib/config";
+import { PRIVY_APP_ID, SITE } from "@/lib/config";
+import { Avatar } from "./avatar";
 
 export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }) {
-  const { logout } = useSession();
+  const { logout, refresh, x } = useSession();
   const router = useRouter();
   const [f, setF] = useState({ handle: me.handle ?? "", name: me.name ?? "", bio: me.bio ?? "", xHandle: me.xHandle ?? "", pnlVisible });
   const [msg, setMsg] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState(me.avatarUrl);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoMsg, setPhotoMsg] = useState<string | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+  // Linked through X sign-in: the X handle comes from X and can't be typed over.
+  const xLocked = !!me.xHandle && !!x.username && x.username.toLowerCase() === me.xHandle.toLowerCase();
+
+  const photo = async (fn: () => Promise<Response>) => {
+    setPhotoBusy(true);
+    setPhotoMsg(null);
+    const r = await fn().catch(() => null);
+    const j = (await r?.json().catch(() => ({}))) as { me?: Me; error?: string } | undefined;
+    setPhotoBusy(false);
+    if (!r?.ok) return setPhotoMsg(j?.error ?? "Couldn't update your photo.");
+    setAvatarUrl(j?.me?.avatarUrl ?? null);
+    await refresh();
+    router.refresh();
+  };
+  const upload = (f: File) =>
+    photo(async () => {
+      const form = new FormData();
+      form.append("file", f);
+      const up = await fetch("/api/media", { method: "POST", body: form });
+      if (!up.ok) return up;
+      const { id } = (await up.json()) as { id: string };
+      return fetch("/api/me", { method: "PATCH", body: JSON.stringify({ avatar: id }) });
+    });
+  const pickX = () => photo(async () => fetch("/api/me/x", { method: "POST", body: JSON.stringify({ ...(PRIVY_APP_ID ? await x.getTokens() : {}), photo: true }) }));
+  const pickGenerated = () => photo(() => fetch("/api/me", { method: "PATCH", body: JSON.stringify({ avatar: null }) }));
 
   const save = async () => {
     setMsg(null);
@@ -21,6 +51,29 @@ export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }
 
   return (
     <div className="space-y-4 px-4 py-5 sm:px-5">
+      <div>
+        <span className="mono mb-2 block text-[10px] tracking-[0.14em] text-muted">PHOTO</span>
+        <div className="flex items-center gap-4">
+          <Avatar user={{ ...me, avatarUrl }} size={76} />
+          <div className="flex flex-wrap gap-2">
+            <input ref={file} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
+            <button disabled={photoBusy} onClick={() => file.current?.click()} className="btn btn-on h-9 px-3.5">
+              {photoBusy ? "SAVING…" : "UPLOAD PHOTO"}
+            </button>
+            {x.username && (
+              <button disabled={photoBusy} onClick={() => void pickX()} className="btn btn-off h-9 px-3.5">
+                USE X PHOTO
+              </button>
+            )}
+            {avatarUrl && (
+              <button disabled={photoBusy} onClick={() => void pickGenerated()} className="btn btn-off h-9 px-3.5">
+                USE [i] AVATAR
+              </button>
+            )}
+          </div>
+        </div>
+        <span className="mono mt-2 block text-[10px] text-dim">{photoMsg ?? "JPEG, PNG, WebP or GIF, up to 5 MB."}</span>
+      </div>
       <Field label="HANDLE">
         <div className="flex items-center gap-1">
           <span className="mono text-muted">@</span>
@@ -34,7 +87,8 @@ export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }
         <textarea value={f.bio} onChange={(e) => setF({ ...f, bio: e.target.value })} maxLength={280} rows={3} className="input h-auto py-2.5" />
       </Field>
       <Field label="X HANDLE">
-        <input value={f.xHandle} onChange={(e) => setF({ ...f, xHandle: e.target.value })} maxLength={30} placeholder="optional" className="input" />
+        <input value={f.xHandle} readOnly={xLocked} onChange={(e) => setF({ ...f, xHandle: e.target.value })} maxLength={30} placeholder="optional" className={`input ${xLocked ? "opacity-60" : ""}`} />
+        {xLocked && <span className="mono mt-1 block text-[10px] text-dim">Linked through your X sign-in.</span>}
       </Field>
       <label className="flex items-center justify-between gap-3">
         <span>
