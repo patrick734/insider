@@ -8,6 +8,7 @@ import {
   publicClient,
   roomChannel,
   sql,
+  splitterFactoryAbi,
   applyContractLogs,
   type Applied,
 } from "@insider/core";
@@ -26,7 +27,10 @@ const client = publicClient();
 const redis = process.env.REDIS_URL ? new Redis(process.env.REDIS_URL) : null;
 const CONFIRMATIONS = BigInt(env("CONFIRMATIONS", "3"));
 const START = BigInt(env("START_BLOCK", "0"));
-const MAX_RANGE = 2000n;
+const MAX_RANGE = BigInt(env("INDEX_RANGE", "2000"));
+// Pause between block ranges while catching up (set on free public RPCs so they don't rate-limit us).
+const PACE_MS = Number(env("INDEX_PACE_MS", "0"));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const transferEvent = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
 const feesDistributedEvent = parseAbiItem("event FeesDistributed(address indexed host, uint256 hostAmount, uint256 holdersAmount, uint256 treasuryAmount)");
 const zero = "0x0000000000000000000000000000000000000000";
@@ -49,11 +53,28 @@ async function timeOf(n: bigint): Promise<Date> {
   return blockTimes.get(n)!;
 }
 
-/** getLogs over [from, to], halving the range when the RPC refuses it. */
-async function logs(params: { address?: `0x${string}` | `0x${string}`[]; from: bigint; to: bigint; event?: typeof transferEvent | typeof feesDistributedEvent }): Promise<Log[]> {
+/** A "slow down" from the RPC (HTTP 429 or a rate-limit message), as opposed to a range that's too big. */
+function rateLimited(e: unknown): boolean {
+  for (let x = e as { status?: number; details?: string; message?: string; cause?: unknown } | undefined; x; x = x.cause as typeof x) {
+    if (x.status === 429) return true;
+    if (/rate.?limit|request limit reached|too many requests|\b429\b/i.test(`${x.details ?? ""} ${x.message ?? ""}`)) return true;
+  }
+  return false;
+}
+
+/**
+ * getLogs over [from, to]. Rate limits are waited out (backing off up to 30s) and the same range retried; any other
+ * refusal (usually "range too large") halves the range.
+ */
+async function logs(params: { address?: `0x${string}` | `0x${string}`[]; from: bigint; to: bigint; event?: typeof transferEvent | typeof feesDistributedEvent }, attempt = 0): Promise<Log[]> {
   try {
     return await client.getLogs({ ...(params.address ? { address: params.address } : {}), fromBlock: params.from, toBlock: params.to, ...(params.event ? { event: params.event } : {}) } as never);
   } catch (e) {
+    if (rateLimited(e)) {
+      if (attempt >= 8) throw e;
+      await sleep(Math.min(30_000, 1000 * 2 ** attempt));
+      return logs(params, attempt + 1);
+    }
     if (params.to - params.from < 5n) throw e;
     const mid = (params.from + params.to) / 2n;
     return [...(await logs({ ...params, to: mid })), ...(await logs({ ...params, from: mid + 1n }))];
@@ -71,12 +92,20 @@ async function indexContracts(head: bigint) {
   let from = (await cursor("contracts")) + 1n;
   while (from <= head) {
     const to = from + MAX_RANGE - 1n < head ? from + MAX_RANGE - 1n : head;
-    // Splitters are clones that can appear mid-range, so their FeesDistributed logs are fetched by event and kept
-    // only if the emitter is a splitter the factory created (checked against the table, after this batch's creations).
-    const [main, splits] = await Promise.all([
-      logs({ address: [ADDRESSES.keys, ADDRESSES.roomAccess, ADDRESSES.splitterFactory], from, to }),
-      logs({ event: feesDistributedEvent, from, to }),
-    ]);
+    // Our three contracts first. Fee splits come from the splitters the factory made: the ones already known plus any
+    // created in this very range, asked for by address (never a scan of every contract on Base).
+    const main = await logs({ address: [ADDRESSES.keys, ADDRESSES.roomAccess, ADDRESSES.splitterFactory], from, to });
+    const splitterAddrs = new Set<string>((await db`select address from splitters`).map((r) => r.address as string));
+    for (const l of main) {
+      if (lower(l.address) !== lower(ADDRESSES.splitterFactory)) continue;
+      try {
+        const ev = decodeEventLog({ abi: splitterFactoryAbi, data: l.data, topics: l.topics }) as { eventName: string; args: Record<string, unknown> };
+        if (ev.eventName === "SplitterCreated") splitterAddrs.add(lower(ev.args.splitter as string));
+      } catch {
+        // not an event we know
+      }
+    }
+    const splits = splitterAddrs.size ? await logs({ address: [...splitterAddrs] as `0x${string}`[], event: feesDistributedEvent, from, to }) : [];
     const batch = [...main, ...splits];
     let applied: Applied = { touched: new Set(), ticks: [] };
     await db.begin(async (tx) => {
@@ -91,7 +120,9 @@ async function indexContracts(head: bigint) {
     }
     for (const holder of touched) await publish(ACCESS_CHANNEL, { holder });
     if (batch.length) console.log(`contracts ${from}-${to}: ${batch.length} logs`);
+    else if (head - to > MAX_RANGE && to % (MAX_RANGE * 25n) < MAX_RANGE) console.log(`catching up: block ${to}, ${head - to} to go`);
     from = to + 1n;
+    if (PACE_MS && from <= head) await sleep(PACE_MS);
   }
 }
 
@@ -127,6 +158,7 @@ async function indexCoins(head: bigint) {
       for (const h of list) await publish(ACCESS_CHANNEL, { holder: h, coin: lower(coin) });
       if (batch.length) console.log(`coin ${coin} ${from}-${to}: ${batch.length} transfers, ${list.length} holders`);
       from = to + 1n;
+      if (PACE_MS && from <= head) await sleep(PACE_MS);
     }
   }
 }

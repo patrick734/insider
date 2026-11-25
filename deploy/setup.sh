@@ -43,9 +43,11 @@ ask LEGAL_EMAIL "Contact email shown in the terms (Enter to use your X handle in
 ask LEGAL_JURISDICTION "Governing law for the terms, e.g. England and Wales (Enter to skip)" ""
 [ -n "$PRIVY_APP_ID" ] || { echo "A Privy App ID is required."; exit 1; }
 INDEX_INTERVAL_MS=2000
+INDEX_PACE_MS=0
 if [ -z "$BASE_RPC_URL" ]; then
   INDEX_INTERVAL_MS=6000
-  echo "No RPC URL: the chain indexer uses Base's free public endpoint, checking every 6 seconds. Fine to start; add an Alchemy or QuickNode URL as you grow."
+  INDEX_PACE_MS=500
+  echo "No RPC URL: the chain indexer uses free public Base endpoints, paced to stay under their limits. Add an Alchemy or QuickNode URL as you grow."
 fi
 
 echo "== Postgres and Redis"
@@ -74,7 +76,7 @@ DATABASE_URL=postgres://insider:$DB_PASS@127.0.0.1:5432/$DB_NAME
 REDIS_URL=redis://127.0.0.1:6379/$REDIS_DB
 SESSION_SECRET=$(cat "$SECRET_FILE")
 NEXT_PUBLIC_CHAIN_ID=8453
-RPC_URLS=${BASE_RPC_URL:+$BASE_RPC_URL,}https://mainnet.base.org
+RPC_URLS=${BASE_RPC_URL:+$BASE_RPC_URL,}https://base-rpc.publicnode.com,https://mainnet.base.org
 NEXT_PUBLIC_RPC_URL=https://mainnet.base.org
 NEXT_PUBLIC_KEYS_ADDRESS=0x8e6Aa3707c2bE2F0472935c6bccB42222E15ADd2
 NEXT_PUBLIC_ROOM_ACCESS_ADDRESS=0x892814990B94Acd528d951571EBE1f3A40E90706
@@ -100,6 +102,7 @@ UPLOAD_DIR=$HOME/insider-uploads-live
 WAITLIST_MODE=$WAITLIST
 INDEXER=1
 INDEX_INTERVAL_MS=$INDEX_INTERVAL_MS
+INDEX_PACE_MS=$INDEX_PACE_MS
 ENV
 umask 022
 
