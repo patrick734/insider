@@ -43,7 +43,8 @@ const apps = [
   },
 ];
 
-// The indexer needs a paid Base RPC (public endpoints cap log queries). Set INDEXER=1 in the env file to run it.
+// The indexer reads the contracts and room coins on Base. It runs on the public endpoint too (polling more slowly);
+// a paid RPC in RPC_URLS is better at scale. INDEXER=1 in the env file runs it.
 if (env.INDEXER === "1") {
   apps.push({
     name: "insider-indexer",

@@ -7,3 +7,4 @@ export * from "./abi";
 export * from "./access";
 export * from "./ticket";
 export * from "./chat";
+export * from "./apply-logs";

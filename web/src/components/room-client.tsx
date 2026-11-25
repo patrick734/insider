@@ -18,6 +18,7 @@ import { Corners } from "./page";
 import { Icon } from "./icons";
 import { PostList } from "./post";
 import { presenceText } from "./presence";
+import { SITE } from "@/lib/config";
 
 type Holder = { address: string; balance: number; handle: string | null; name: string | null };
 type Trade = { txHash: string; side: "buy" | "sell"; amount: number; ethWei: string; at: string; who: string };
@@ -453,6 +454,9 @@ export function KeysPanel({ room, me, supplyHint, heldHint = 0, onDone }: { room
   const [mine, setMine] = useState<bigint>(BigInt(heldHint));
   const [rewards, setRewards] = useState<bigint>(0n);
   const [flipBps, setFlipBps] = useState<bigint>(0n);
+  // Live rules from the contract (null until read): buy limit, fee split, when you may sell, when the public may buy.
+  const [rules, setRules] = useState<null | { maxBuy: number; creatorBps: number; protocolBps: number; roomBps: number; sellableAt: number; publicFrom: number }>(null);
+  const [quote, setQuote] = useState<bigint | null>(null);
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [n, setN] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -463,6 +467,16 @@ export function KeysPanel({ room, me, supplyHint, heldHint = 0, onDone }: { room
     const c = readClient();
     const s = await c.readContract({ address: ADDRESSES.keys, abi: keysAbi, functionName: "supplyOf", args: [host] }).catch(() => null);
     if (s !== null) setSupply(s);
+    const [mb, fees, pub, sa] = await Promise.all([
+      c.readContract({ address: ADDRESSES.keys, abi: keysAbi, functionName: "maxBuy", args: [host] }).catch(() => null),
+      c.readContract({ address: ADDRESSES.keys, abi: keysAbi, functionName: "fees" }).catch(() => null),
+      c.readContract({ address: ADDRESSES.keys, abi: keysAbi, functionName: "publicFrom", args: [host] }).catch(() => null),
+      me ? c.readContract({ address: ADDRESSES.keys, abi: keysAbi, functionName: "sellableAt", args: [host, me.address as `0x${string}`] }).catch(() => null) : null,
+    ]);
+    if (mb !== null && fees) {
+      const [creatorBps, protocolBps, roomBps] = fees as readonly [number, number, number];
+      setRules({ maxBuy: Number(mb), creatorBps: Number(creatorBps), protocolBps: Number(protocolBps), roomBps: Number(roomBps), sellableAt: Number(sa ?? 0n), publicFrom: Number(pub ?? 0n) });
+    }
     if (me) {
       const [b, r, f] = await Promise.all([
         c.readContract({ address: ADDRESSES.keys, abi: keysAbi, functionName: "balanceOf", args: [host, me.address as `0x${string}`] }).catch(() => 0n),
@@ -478,9 +492,32 @@ export function KeysPanel({ room, me, supplyHint, heldHint = 0, onDone }: { room
     void load();
   }, [load]);
 
-  const max = side === "buy" ? maxBuy(supply) : Number(isHost ? (mine > 0n ? mine - 1n : 0n) : mine);
+  const max = side === "buy" ? (rules?.maxBuy ?? maxBuy(supply)) : Number(isHost ? (mine > 0n ? mine - 1n : 0n) : mine);
   const amount = BigInt(Math.max(1, Math.min(n, Math.max(1, max))));
-  const total = side === "buy" ? buyTotal(supply, amount) : sellNet(supply, amount, flipBps);
+  const local = side === "buy" ? buyTotal(supply, amount) : sellNet(supply, amount, flipBps);
+  // The exact price after fees, from the contract; the local mirror shows while it loads.
+  useEffect(() => {
+    if (!live || supply === 0n) return setQuote(null);
+    let stop = false;
+    const c = readClient();
+    const q =
+      side === "buy"
+        ? c.readContract({ address: ADDRESSES.keys, abi: keysAbi, functionName: "getBuyPriceAfterFee", args: [host, amount] })
+        : me
+          ? c.readContract({ address: ADDRESSES.keys, abi: keysAbi, functionName: "getSellPriceAfterFee", args: [host, me.address as `0x${string}`, amount] })
+          : Promise.resolve(null);
+    void q.then((v) => !stop && setQuote(v)).catch(() => !stop && setQuote(null));
+    return () => {
+      stop = true;
+    };
+  }, [live, host, me, side, amount, supply]);
+  const total = quote ?? local;
+  const feePct = rules ? (rules.creatorBps + rules.protocolBps + rules.roomBps) / 100 : 8;
+  const now = Math.floor(Date.now() / 1000);
+  const hostOnlyUntil = rules && !isHost && rules.publicFrom > now ? rules.publicFrom : 0;
+  const coolUntil = rules && rules.sellableAt > now ? rules.sellableAt : 0;
+  const clock = (t: number) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const blocked = side === "buy" ? (hostOnlyUntil ? `Only the host can buy until ${clock(hostOnlyUntil)}. Then it opens to everyone.` : null) : coolUntil ? `You can sell from ${clock(coolUntil)} (30 minutes after your last buy).` : max === 0 ? "nothing" : null;
 
   const run = async (label: string, fn: () => Promise<unknown>) => {
     if (!me) return login();
@@ -539,18 +576,36 @@ export function KeysPanel({ room, me, supplyHint, heldHint = 0, onDone }: { room
           <div className="mt-3 flex items-center justify-between">
             <span className="mono text-[10px] tracking-[0.14em] text-muted">KEYS · MAX {max}</span>
             <span className="flex items-center">
-              <button onClick={() => setN((x) => Math.max(1, x - 1))} className="mono grid h-9 w-9 place-items-center border border-accent/40 text-accent-soft">
+              <button
+                aria-label="One fewer"
+                disabled={amount <= 1n}
+                onClick={() => setN(Math.max(1, Number(amount) - 1))}
+                className="mono grid h-9 w-9 place-items-center border border-accent/40 text-accent-soft disabled:opacity-30"
+              >
                 −
               </button>
               <b className="mono w-12 text-center text-xl">{amount.toString()}</b>
-              <button onClick={() => setN((x) => Math.min(Math.max(1, max), x + 1))} className="mono grid h-9 w-9 place-items-center bg-accent text-on-accent">
+              <button
+                aria-label="One more"
+                disabled={Number(amount) >= max}
+                onClick={() => setN(Math.min(Math.max(1, max), Number(amount) + 1))}
+                className="mono grid h-9 w-9 place-items-center bg-accent text-on-accent disabled:opacity-30"
+              >
                 +
               </button>
             </span>
           </div>
+          {side === "buy" && max < 5 && (
+            <p className="mono mt-1.5 text-[10.5px] leading-relaxed text-dim">
+              A buy can be at most 10% of all {supply.toString()} keys (at least 1, at most 5), so the limit rises as more keys are bought.
+            </p>
+          )}
+          {side === "sell" && max === 0 && (
+            <p className="mono mt-1.5 text-[10.5px] leading-relaxed text-dim">{isHost ? "Your first key stays with you, so it can't be sold." : "You don't hold any of these keys yet."}</p>
+          )}
           <div className="mono mt-3 space-y-1 text-[11.5px] text-muted">
             <div className="flex justify-between">
-              <span>{side === "buy" ? "YOU PAY (INCL. 8% FEE)" : "YOU GET (AFTER FEES)"}</span>
+              <span>{side === "buy" ? `YOU PAY (INCL. ${feePct}% FEE)` : "YOU GET (AFTER FEES)"}</span>
               <b className="text-text">{eth(total)}</b>
             </div>
             {side === "sell" && flipBps > 0n && (
@@ -564,8 +619,9 @@ export function KeysPanel({ room, me, supplyHint, heldHint = 0, onDone }: { room
               <span className="text-soft">{mine.toString()}</span>
             </div>
           </div>
+          {blocked && blocked !== "nothing" && <p className="mono mt-3 text-[11px] leading-relaxed text-accent-soft">{blocked}</p>}
           <button
-            disabled={busy || !live || (side === "sell" && max < 1)}
+            disabled={busy || !live || (side === "sell" && max < 1) || (!!blocked && blocked !== "nothing")}
             onClick={() =>
               void run(side === "buy" ? "Buy" : "Sell", () =>
                 side === "buy" ? write("buyKeys", [host, amount], (total * 101n) / 100n) : write("sellKeys", [host, amount, (total * 98n) / 100n]),
@@ -585,7 +641,9 @@ export function KeysPanel({ room, me, supplyHint, heldHint = 0, onDone }: { room
               </button>
             </div>
           )}
-          <p className="mono mt-3 text-[10px] leading-relaxed text-dim">Holders share 2% of key trades and 20% of in-app swap fees in this room, streamed over 3 days. Sell cooldown 30 min after a buy.</p>
+          <p className="mono mt-3 text-[10px] leading-relaxed text-dim">
+            Each trade pays {feePct}%: {(rules?.creatorBps ?? 400) / 100}% to @{room.host.handle ?? "the host"}, {(rules?.roomBps ?? 200) / 100}% to key holders, {(rules?.protocolBps ?? 200) / 100}% to {SITE.name}. Holders also share 20% of in-app swap fees in this room, streamed over 3 days. Sell cooldown 30 min after a buy.
+          </p>
         </>
       )}
       {msg && <p className="mono mt-2.5 text-[11px] text-accent-soft">{msg}</p>}

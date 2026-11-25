@@ -42,10 +42,10 @@ ask LEGAL_ENTITY "Legal name of who runs the site, for the terms (Enter to skip)
 ask LEGAL_EMAIL "Contact email shown in the terms (Enter to use your X handle instead)" ""
 ask LEGAL_JURISDICTION "Governing law for the terms, e.g. England and Wales (Enter to skip)" ""
 [ -n "$PRIVY_APP_ID" ] || { echo "A Privy App ID is required."; exit 1; }
-INDEXER=1
+INDEX_INTERVAL_MS=2000
 if [ -z "$BASE_RPC_URL" ]; then
-  INDEXER=0
-  echo "No RPC URL yet: the waitlist works, the chain indexer stays off. Run this again later and it will ask for the RPC URL again."
+  INDEX_INTERVAL_MS=6000
+  echo "No RPC URL: the chain indexer uses Base's free public endpoint, checking every 6 seconds. Fine to start; add an Alchemy or QuickNode URL as you grow."
 fi
 
 echo "== Postgres and Redis"
@@ -98,7 +98,8 @@ WEB_PORT=$WEB_PORT
 REALTIME_PORT=$RT_PORT
 UPLOAD_DIR=$HOME/insider-uploads-live
 WAITLIST_MODE=$WAITLIST
-INDEXER=$INDEXER
+INDEXER=1
+INDEX_INTERVAL_MS=$INDEX_INTERVAL_MS
 ENV
 umask 022
 

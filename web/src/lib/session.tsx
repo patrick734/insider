@@ -230,6 +230,8 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
       const hash = await fn(w);
       const receipt = await readClient().waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") throw new Error("The transaction failed on-chain.");
+      // Record it now so holders, balances and activity update at once (the indexer would catch up anyway).
+      await fetch("/api/chain/tx", { method: "POST", body: JSON.stringify({ txHash: hash }) }).catch(() => null);
       return hash;
     },
     [wallet],
