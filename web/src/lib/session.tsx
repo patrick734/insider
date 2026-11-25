@@ -197,21 +197,21 @@ export function PrivySessionProvider({ children, initialMe }: { children: React.
     return { idToken, accessToken: await getAccessToken().catch(() => null) };
   }, [refreshUser]);
 
-  // Signed in with X and the account is missing the X handle or a photo: link it (once per visit). The server only
-  // fills the photo if the person hasn't chosen one themselves in settings.
+  // Signed in with X: link it once per visit. The server fills in a missing name and photo (never over the person's
+  // own choice) and refreshes X followers at most once a day.
   const xSynced = useRef(false);
   useEffect(() => {
-    if (!me || (me.xHandle && me.avatarUrl) || !user?.twitter?.username || xSynced.current) return;
+    if (!me || !user?.twitter?.username || xSynced.current) return;
     xSynced.current = true;
     void (async () => {
-      const body = { ...(await getTokens()), photoUrl: user.twitter?.profilePictureUrl ?? null };
+      const body = { ...(await getTokens()), photoUrl: user.twitter?.profilePictureUrl ?? null, name: user.twitter?.name ?? null };
       const r = await fetch("/api/me/x", { method: "POST", body: JSON.stringify(body) }).catch(() => null);
       if (r?.ok) {
         setMe(((await r.json()) as { me: Me | null }).me);
         router.refresh();
       }
     })();
-  }, [me, user?.twitter?.username, user?.twitter?.profilePictureUrl, getTokens, router]);
+  }, [me, user?.twitter?.username, user?.twitter?.profilePictureUrl, user?.twitter?.name, getTokens, router]);
   // Already signed in to Privy but no session yet (or the last try failed): try again instead of opening Privy.
   const signIn = useCallback(() => {
     if (authenticated) setAttempt((a) => a + 1);

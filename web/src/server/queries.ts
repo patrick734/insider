@@ -200,6 +200,8 @@ export type Profile = UserLite & {
   bio: string | null;
   bannerUrl: string | null;
   xHandle: string | null;
+  /** Followers on X (only with X API access). */
+  xFollowers: number | null;
   createdAt: string;
   following: number;
   followers: number;
@@ -214,7 +216,7 @@ export type Profile = UserLite & {
 export async function profile(handleOrAddress: string, viewerId: string | null): Promise<Profile | null> {
   const key = handleOrAddress.toLowerCase();
   const rows = await db()`
-    select ${U()}, u.bio, u.banner_url, u.x_handle, u.created_at, u.pnl_visible,
+    select ${U()}, u.bio, u.banner_url, u.x_handle, u.x_followers, u.created_at, u.pnl_visible,
       (select count(*) from follows where follower_id = u.id)::int as following,
       (select count(*) from follows where followee_id = u.id)::int as followers,
       (select count(*) from key_balances kb where kb.subject = u.address and kb.balance > 0)::int as key_holders,
@@ -236,6 +238,7 @@ export async function profile(handleOrAddress: string, viewerId: string | null):
     bio: (r.bio as string) ?? null,
     bannerUrl: (r.banner_url as string) ?? null,
     xHandle: (r.x_handle as string) ?? null,
+    xFollowers: r.x_followers == null ? null : Number(r.x_followers),
     createdAt: iso(r.created_at),
     following: Number(r.following),
     followers: Number(r.followers),

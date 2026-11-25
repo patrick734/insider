@@ -14,7 +14,7 @@ export const POST = handle(async (req: Request) => {
   const me = await requireMe();
   const { idToken, accessToken } = await body<{ idToken?: string; accessToken?: string }>(req);
   let account: XAccount | null;
-  if (demoLoginEnabled()) account = { id: `demo:${me.id}`, username: me.handle ?? `user${me.id}`, picture: null };
+  if (demoLoginEnabled()) account = { id: `demo:${me.id}`, username: me.handle ?? `user${me.id}`, picture: null, name: null };
   else account = await xFromPrivyToken(idToken ?? "", accessToken);
   if (!account && !idToken && !process.env.PRIVY_APP_SECRET)
     throw new HttpError(400, "Couldn't get a sign-in token from Privy. Check that identity tokens are on in the Privy dashboard.");

@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { sql } from "@insider/core";
 import { HttpError } from "./auth";
 import { putObject, sniffImage } from "./storage";
-import type { XAccount } from "./x";
+import { xDetails, type XAccount } from "./x";
 
 const MAX_PHOTO = 2 * 1024 * 1024;
 
@@ -36,13 +36,16 @@ async function copyXPhoto(userId: string, url: string): Promise<string | null> {
  * (no photo and no deliberate choice), or always when `usePhoto` (the "use my X photo" button). The photo comes from
  * Privy's token, else `photoHint` (the URL Privy gives the browser); either way only X's image host is fetched.
  */
-export async function linkX(userId: string, account: XAccount, usePhoto = false, photoHint?: string | null) {
+export async function linkX(userId: string, account: XAccount, usePhoto = false, photoHint?: string | null, nameHint?: string | null) {
+  const name = (account.name || nameHint || "").trim().slice(0, 40) || null;
   try {
-    await sql()`update users set x_user_id = ${account.id}, x_handle = ${account.username} where id = ${userId}`;
+    // The X display name fills in a missing name; a name the person set themselves stays.
+    await sql()`update users set x_user_id = ${account.id}, x_handle = ${account.username}, name = coalesce(name, ${name}) where id = ${userId}`;
   } catch (e) {
     if ((e as { code?: string }).code === "23505") throw new HttpError(409, "That X account is already linked to another account.");
     throw e;
   }
+  await syncXDetails(userId, account.id);
   const picture = account.picture || photoHint || null;
   if (!picture) {
     if (usePhoto) throw new HttpError(404, "Your X account has no photo we can use.");
@@ -53,4 +56,17 @@ export async function linkX(userId: string, account: XAccount, usePhoto = false,
   const url = await copyXPhoto(userId, picture);
   if (url) await sql()`update users set avatar_url = ${url}, avatar_source = 'x' where id = ${userId}`;
   else if (usePhoto) throw new HttpError(502, "Couldn't fetch your X photo. Try again in a moment.");
+}
+
+/** Followers, account age and (if they have none) bio from the X API, at most once a day. Needs X_BEARER_TOKEN. */
+async function syncXDetails(userId: string, xUserId: string) {
+  if (!process.env.X_BEARER_TOKEN) return;
+  const [u] = await sql()`select x_synced_at > now() - interval '1 day' as fresh from users where id = ${userId}`;
+  if (u?.fresh) return;
+  const d = await xDetails(xUserId);
+  if (!d) return;
+  await sql()`
+    update users set x_followers = ${d.followers}, x_created_at = ${d.createdAt}, x_synced_at = now(),
+      bio = coalesce(bio, ${d.bio ? d.bio.slice(0, 280) : null})
+    where id = ${userId}`;
 }

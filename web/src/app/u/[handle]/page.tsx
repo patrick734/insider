@@ -73,6 +73,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
                 <a href={`https://x.com/${p.xHandle}`} target="_blank" rel="noreferrer">
                   x.com/{p.xHandle}
                 </a>
+                {p.xFollowers != null && <span className="text-muted"> · {compact(p.xFollowers)} followers on X</span>}
               </>
             )}
           </span>

@@ -10,11 +10,11 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
  * Follow check and account age/followers need the X API (X_BEARER_TOKEN). Without it, follows stay "pending" and
  * never count as verified, as the plan says.
  */
-export type XAccount = { id: string; username: string; picture: string | null };
+export type XAccount = { id: string; username: string; picture: string | null; name: string | null };
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
-export type PrivyLinked = { type: string; subject?: string; username?: string; address?: string; chain_type?: string; profile_picture_url?: string | null };
+export type PrivyLinked = { type: string; subject?: string; username?: string; address?: string; chain_type?: string; profile_picture_url?: string | null; name?: string | null };
 
 /** The accounts a person linked in Privy, from an identity token Privy signed for this app (null if it doesn't check out). */
 export async function privyLinkedAccounts(idToken: string, accessToken?: string | null): Promise<PrivyLinked[] | null> {
@@ -55,7 +55,7 @@ export async function privyLinkedAccounts(idToken: string, accessToken?: string 
 
 export async function xFromPrivyToken(idToken: string, accessToken?: string | null): Promise<XAccount | null> {
   const x = (await privyLinkedAccounts(idToken, accessToken))?.find((a) => a.type === "twitter_oauth");
-  return x?.subject && x.username ? { id: x.subject, username: x.username, picture: x.profile_picture_url ?? null } : null;
+  return x?.subject && x.username ? { id: x.subject, username: x.username, picture: x.profile_picture_url ?? null, name: x.name ?? null } : null;
 }
 
 export type XCheck = { status: "verified" | "pending" | "failed"; reason?: string; followers?: number; createdAt?: string };
@@ -68,6 +68,15 @@ async function x<T>(path: string): Promise<T | null> {
   const r = await fetch(`${API}${path}`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10_000) }).catch(() => null);
   if (!r?.ok) return null;
   return (await r.json()) as T;
+}
+
+/** Public X details for a profile (followers, account age, bio). Null without X API access or if X can't be reached. */
+export async function xDetails(userId: string): Promise<{ followers: number; createdAt: string; bio: string | null } | null> {
+  const r = await x<{ data?: { created_at: string; description?: string; public_metrics: { followers_count: number } } }>(
+    `/users/${encodeURIComponent(userId)}?user.fields=created_at,description,public_metrics`,
+  );
+  if (!r?.data) return null;
+  return { followers: r.data.public_metrics.followers_count, createdAt: r.data.created_at, bio: r.data.description?.trim() || null };
 }
 
 /** Account age and follower floor, then whether they follow the project account. */
