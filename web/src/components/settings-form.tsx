@@ -6,7 +6,7 @@ import { useSession, type Me } from "@/lib/session";
 import { PRIVY_APP_ID, SITE } from "@/lib/config";
 import { Avatar } from "./avatar";
 
-export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }) {
+export function SettingsForm({ me, pnlVisible, bannerUrl: initialBanner }: { me: Me; pnlVisible: boolean; bannerUrl: string | null }) {
   const { logout, refresh, x } = useSession();
   const router = useRouter();
   const [f, setF] = useState({ handle: me.handle ?? "", name: me.name ?? "", bio: me.bio ?? "", xHandle: me.xHandle ?? "", pnlVisible });
@@ -15,6 +15,8 @@ export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoMsg, setPhotoMsg] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
+  const bannerFile = useRef<HTMLInputElement>(null);
+  const [bannerUrl, setBannerUrl] = useState(initialBanner);
   // Linked through X sign-in: the X handle comes from X and can't be typed over.
   const xLocked = !!me.xHandle && !!x.username && x.username.toLowerCase() === me.xHandle.toLowerCase();
 
@@ -29,15 +31,18 @@ export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }
     await refresh();
     router.refresh();
   };
-  const upload = (f: File) =>
+  const uploadTo = (field: "avatar" | "banner", f: File) =>
     photo(async () => {
       const form = new FormData();
       form.append("file", f);
       const up = await fetch("/api/media", { method: "POST", body: form });
       if (!up.ok) return up;
       const { id } = (await up.json()) as { id: string };
-      return fetch("/api/me", { method: "PATCH", body: JSON.stringify({ avatar: id }) });
+      if (field === "banner") setBannerUrl(`/api/media/${id}`);
+      return fetch("/api/me", { method: "PATCH", body: JSON.stringify({ [field]: id }) });
     });
+  const upload = (f: File) => uploadTo("avatar", f);
+  const removeBanner = () => (setBannerUrl(null), photo(() => fetch("/api/me", { method: "PATCH", body: JSON.stringify({ banner: null }) })));
   const pickX = () => photo(async () => fetch("/api/me/x", { method: "POST", body: JSON.stringify({ ...(PRIVY_APP_ID ? await x.getTokens() : {}), photo: true, photoUrl: x.photoUrl }) }));
   const pickGenerated = () => photo(() => fetch("/api/me", { method: "PATCH", body: JSON.stringify({ avatar: null }) }));
 
@@ -74,6 +79,37 @@ export function SettingsForm({ me, pnlVisible }: { me: Me; pnlVisible: boolean }
         </div>
         <span className="mono mt-2 block text-[10px] text-dim">{photoMsg ?? "JPEG, PNG, WebP or GIF, up to 5 MB."}</span>
       </div>
+      <div>
+        <span className="mono mb-2 block text-[10px] tracking-[0.14em] text-muted">BANNER</span>
+        <div className="art relative h-[96px] overflow-hidden border border-accent/30">
+          {bannerUrl && <img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <input ref={bannerFile} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(e) => e.target.files?.[0] && void uploadTo("banner", e.target.files[0])} />
+          <button disabled={photoBusy} onClick={() => bannerFile.current?.click()} className="btn btn-off h-9 px-3.5">
+            UPLOAD BANNER
+          </button>
+          {bannerUrl && (
+            <button disabled={photoBusy} onClick={() => void removeBanner()} className="btn btn-off h-9 px-3.5">
+              REMOVE BANNER
+            </button>
+          )}
+        </div>
+        <span className="mono mt-2 block text-[10px] text-dim">Wide images work best (1500×500).</span>
+      </div>
+      {PRIVY_APP_ID && (
+        <div className="panel flex items-center justify-between gap-3 p-3.5">
+          <span className="flex min-w-0 flex-col">
+            <b className="text-sm">{x.username ? `X connected: @${x.username}` : "Connect your X account"}</b>
+            <span className="text-xs text-muted">{x.username ? "Your X photo, name and handle come over automatically." : "Brings your X photo, name and handle over, and shows your X on your profile."}</span>
+          </span>
+          {!x.username && (
+            <button onClick={x.link} className="btn btn-on h-9 flex-none px-3.5">
+              CONNECT X
+            </button>
+          )}
+        </div>
+      )}
       <Field label="HANDLE">
         <div className="flex items-center gap-1">
           <span className="mono text-muted">@</span>

@@ -5,22 +5,26 @@ import { HttpError } from "./auth";
 import { putObject, sniffImage } from "./storage";
 import { xDetails, type XAccount } from "./x";
 
-const MAX_PHOTO = 2 * 1024 * 1024;
+const MAX_PHOTO = 4 * 1024 * 1024;
 
 /**
- * Copy an X profile photo into our own storage (so we don't hotlink X, and the photo survives the person changing
- * theirs on X). Only X's image host is fetched. X serves a 48px "_normal" size by default; ask for 400x400.
+ * Copy an X photo or banner into our own storage (so we don't hotlink X, and it survives the person changing theirs on
+ * X). Only X's image host is fetched. Photos come as a 48px "_normal" size by default, so ask for 400x400; banners
+ * come without a size, so ask for 1500x500.
  */
-async function copyXPhoto(userId: string, url: string): Promise<string | null> {
+async function copyXImage(userId: string, url: string, kind: "photo" | "banner"): Promise<string | null> {
   let u: URL;
   try {
-    u = new URL(url.replace(/_normal(\.[a-z]+)$/i, "_400x400$1"));
+    u = new URL(kind === "photo" ? url.replace(/_normal(\.[a-z]+)$/i, "_400x400$1") : /\/\d+x\d+$/.test(url) ? url : `${url.replace(/\/$/, "")}/1500x500`);
   } catch {
     return null;
   }
   if (u.protocol !== "https:" || u.hostname !== "pbs.twimg.com") return null;
   const r = await fetch(u, { signal: AbortSignal.timeout(10_000), redirect: "error" }).catch(() => null);
-  if (!r?.ok) return null;
+  if (!r?.ok) {
+    console.warn(`[x] couldn't fetch the X ${kind}: ${r ? r.status : "network error"}`);
+    return null;
+  }
   const bytes = Buffer.from(await r.arrayBuffer());
   if (bytes.length > MAX_PHOTO) return null;
   const mime = sniffImage(bytes);
@@ -53,15 +57,15 @@ export async function linkX(userId: string, account: XAccount, usePhoto = false,
   }
   const [u] = await sql()`select avatar_url, avatar_source from users where id = ${userId}`;
   if (!usePhoto && (u?.avatar_url || u?.avatar_source)) return;
-  const url = await copyXPhoto(userId, picture);
+  const url = await copyXImage(userId, picture, "photo");
   if (url) await sql()`update users set avatar_url = ${url}, avatar_source = 'x' where id = ${userId}`;
   else if (usePhoto) throw new HttpError(502, "Couldn't fetch your X photo. Try again in a moment.");
 }
 
-/** Followers, account age and (if they have none) bio from the X API, at most once a day. Needs X_BEARER_TOKEN. */
+/** Followers, account age, and (if they have none) bio and banner from the X API, at most once a day. Needs X_BEARER_TOKEN. */
 async function syncXDetails(userId: string, xUserId: string) {
   if (!process.env.X_BEARER_TOKEN) return;
-  const [u] = await sql()`select x_synced_at > now() - interval '1 day' as fresh from users where id = ${userId}`;
+  const [u] = await sql()`select x_synced_at > now() - interval '1 day' as fresh, banner_url from users where id = ${userId}`;
   if (u?.fresh) return;
   const d = await xDetails(xUserId);
   if (!d) return;
@@ -69,4 +73,8 @@ async function syncXDetails(userId: string, xUserId: string) {
     update users set x_followers = ${d.followers}, x_created_at = ${d.createdAt}, x_synced_at = now(),
       bio = coalesce(bio, ${d.bio ? d.bio.slice(0, 280) : null})
     where id = ${userId}`;
+  if (d.banner && !u?.banner_url) {
+    const banner = await copyXImage(userId, d.banner, "banner");
+    if (banner) await sql()`update users set banner_url = ${banner} where id = ${userId} and banner_url is null`;
+  }
 }

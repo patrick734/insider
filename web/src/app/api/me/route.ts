@@ -11,11 +11,11 @@ export async function GET() {
 
 /**
  * Edit your profile: handle, name, bio, X handle (only while X isn't linked through sign-in), whether your PnL shows,
- * and your photo (`avatar`: an image you uploaded, or null for the generated avatar).
+ * your photo and banner (`avatar` / `banner`: an image you uploaded, or null to remove it).
  */
 export const PATCH = handle(async (req: Request) => {
   const me = await requireMe();
-  const b = await body<{ handle?: string; name?: string; bio?: string; xHandle?: string; pnlVisible?: boolean; avatar?: string | null }>(req);
+  const b = await body<{ handle?: string; name?: string; bio?: string; xHandle?: string; pnlVisible?: boolean; avatar?: string | null; banner?: string | null }>(req);
   const handle = b.handle?.trim().toLowerCase().replace(/^@/, "");
   if (handle !== undefined && !/^[a-z0-9_]{3,20}$/.test(handle)) throw new HttpError(400, "Handles are 3 to 20 letters, numbers or underscores.");
   if (b.name !== undefined && b.name.length > 40) throw new HttpError(400, "Names are 40 characters at most.");
@@ -26,6 +26,14 @@ export const PATCH = handle(async (req: Request) => {
       const [m] = /^[0-9a-f]{24}$/.test(String(b.avatar)) ? await sql()`select id from media where id = ${b.avatar} and user_id = ${me.id}` : [];
       if (!m) throw new HttpError(400, "Upload the photo first.");
       await sql()`update users set avatar_url = ${`/api/media/${m.id}`}, avatar_source = 'upload' where id = ${me.id}`;
+    }
+  }
+  if (b.banner !== undefined) {
+    if (b.banner === null) await sql()`update users set banner_url = null where id = ${me.id}`;
+    else {
+      const [m] = /^[0-9a-f]{24}$/.test(String(b.banner)) ? await sql()`select id from media where id = ${b.banner} and user_id = ${me.id}` : [];
+      if (!m) throw new HttpError(400, "Upload the banner first.");
+      await sql()`update users set banner_url = ${`/api/media/${m.id}`} where id = ${me.id}`;
     }
   }
   try {

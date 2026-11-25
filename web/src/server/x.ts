@@ -70,13 +70,19 @@ async function x<T>(path: string): Promise<T | null> {
   return (await r.json()) as T;
 }
 
-/** Public X details for a profile (followers, account age, bio). Null without X API access or if X can't be reached. */
-export async function xDetails(userId: string): Promise<{ followers: number; createdAt: string; bio: string | null } | null> {
-  const r = await x<{ data?: { created_at: string; description?: string; public_metrics: { followers_count: number } } }>(
-    `/users/${encodeURIComponent(userId)}?user.fields=created_at,description,public_metrics`,
-  );
+/** Public X details for a profile (followers, account age, bio, banner). Null without X API access or if X can't be reached. */
+export async function xDetails(userId: string): Promise<{ followers: number; createdAt: string; bio: string | null; banner: string | null } | null> {
+  const id = encodeURIComponent(userId);
+  const r = await x<{ data?: { created_at: string; description?: string; public_metrics: { followers_count: number } } }>(`/users/${id}?user.fields=created_at,description,public_metrics`);
   if (!r?.data) return null;
-  return { followers: r.data.public_metrics.followers_count, createdAt: r.data.created_at, bio: r.data.description?.trim() || null };
+  // The banner field isn't on every API plan: asked for separately, so its absence never loses the rest.
+  const b = await x<{ data?: { profile_banner_url?: string } }>(`/users/${id}?user.fields=profile_banner_url`);
+  return {
+    followers: r.data.public_metrics.followers_count,
+    createdAt: r.data.created_at,
+    bio: r.data.description?.trim() || null,
+    banner: b?.data?.profile_banner_url ?? null,
+  };
 }
 
 /** Account age and follower floor, then whether they follow the project account. */

@@ -10,13 +10,13 @@ export const metadata: Metadata = { title: "Settings" };
 
 export default async function Settings() {
   const me = await getMe();
-  const [row] = me ? await sql()`select pnl_visible from users where id = ${me.id}` : [];
+  const [row] = me ? await sql()`select pnl_visible, banner_url from users where id = ${me.id}` : [];
   return (
     <>
       <Main>
         <PageHeader title="Settings" />
         {me ? (
-          <SettingsForm me={me} pnlVisible={Boolean(row?.pnl_visible)} />
+          <SettingsForm me={me} pnlVisible={Boolean(row?.pnl_visible)} bannerUrl={(row?.banner_url as string) ?? null} />
         ) : (
           <p className="px-5 py-10 text-center text-sm text-muted">Sign in to edit your profile.</p>
         )}
