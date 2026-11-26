@@ -1,6 +1,6 @@
 # Insider
 
-The SocialFi home for every coin on Base: holder-gated coin rooms with live chat, access keys that share in the room's
+SocialFi for Base: rooms, receipts, keys. Insider has holder-gated coin rooms with live chat, access keys that share in the room's
 fees, in-app swaps that pay the host, and verified on-chain PnL.
 
 ## Layout

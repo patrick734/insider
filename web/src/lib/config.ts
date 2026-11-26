@@ -13,7 +13,7 @@ export const SITE = {
   mark: dot > 0 ? domain.slice(0, dot).toUpperCase() : name.toUpperCase(),
   tld: dot > 0 ? domain.slice(dot) : "",
   url: process.env.NEXT_PUBLIC_SITE_URL || `https://${domain}`,
-  tagline: process.env.NEXT_PUBLIC_BRAND_TAGLINE || "The SocialFi home for every coin on Base.",
+  tagline: process.env.NEXT_PUBLIC_BRAND_TAGLINE || "SocialFi for Base: rooms, receipts, keys.",
   /** Who runs the site, how to reach them, and whose law governs the terms (shown on /terms and /privacy). */
   legal: {
     entity: process.env.NEXT_PUBLIC_LEGAL_ENTITY || "",
